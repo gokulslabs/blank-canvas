@@ -21,13 +21,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download, AlertCircle } from "lucide-react";
 import { Invoice, LineItem } from "@/types/accounting";
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateInvoicePDF } from "@/lib/invoicePdf";
-import { INDIAN_STATES } from "@/lib/gst";
+import { INDIAN_STATES, VALID_GST_RATES, isValidGSTIN, calculateGST, classifyB2BorB2C } from "@/lib/gst";
 
 const PAGE_SIZE = 10;
 
@@ -40,7 +39,7 @@ function InvoiceForm({
   initial?: {
     customerName: string;
     taxRate: string;
-    lineItems: { name: string; price: string; quantity: string }[];
+    lineItems: { name: string; price: string; quantity: string; hsnCode?: string }[];
     customerGstin?: string;
     placeOfSupply?: string;
     isInterstate?: boolean;
@@ -57,13 +56,14 @@ function InvoiceForm({
   submitLabel: string;
 }) {
   const [customerName, setCustomerName] = useState(initial?.customerName || "");
-  const [taxRate, setTaxRate] = useState(initial?.taxRate || "0");
-  const [lineItems, setLineItems] = useState(initial?.lineItems || [{ name: "", price: "", quantity: "1" }]);
+  const [taxRate, setTaxRate] = useState(initial?.taxRate || "18");
+  const [lineItems, setLineItems] = useState(initial?.lineItems || [{ name: "", price: "", quantity: "1", hsnCode: "" }]);
   const [customerGstin, setCustomerGstin] = useState(initial?.customerGstin || "");
   const [placeOfSupply, setPlaceOfSupply] = useState(initial?.placeOfSupply || "");
   const [isInterstate, setIsInterstate] = useState(initial?.isInterstate || false);
+  const [gstinError, setGstinError] = useState("");
 
-  const addLineItem = () => setLineItems([...lineItems, { name: "", price: "", quantity: "1" }]);
+  const addLineItem = () => setLineItems([...lineItems, { name: "", price: "", quantity: "1", hsnCode: "" }]);
   const removeLineItem = (idx: number) => setLineItems(lineItems.filter((_, i) => i !== idx));
   const updateLineItem = (idx: number, field: string, value: string) => {
     const updated = [...lineItems];
@@ -71,12 +71,37 @@ function InvoiceForm({
     setLineItems(updated);
   };
 
+  // Auto-calculate preview
+  const preview = useMemo(() => {
+    const items = lineItems.filter((li) => li.name && li.price);
+    const subtotal = items.reduce((s, li) => s + (parseFloat(li.price) || 0) * (parseInt(li.quantity) || 1), 0);
+    const rate = parseFloat(taxRate) || 0;
+    const gst = calculateGST(subtotal, rate, isInterstate);
+    return { subtotal, ...gst, total: subtotal + gst.totalTax };
+  }, [lineItems, taxRate, isInterstate]);
+
+  const handleGstinChange = (value: string) => {
+    const upper = value.toUpperCase();
+    setCustomerGstin(upper);
+    if (upper && !isValidGSTIN(upper)) {
+      setGstinError("Invalid GSTIN format (e.g. 22AAAAA0000A1Z5)");
+    } else {
+      setGstinError("");
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || submitting) return;
+    if (customerGstin && !isValidGSTIN(customerGstin)) return;
     const items = lineItems
       .filter((li) => li.name && li.price)
-      .map((li) => ({ name: li.name, price: parseFloat(li.price) || 0, quantity: parseInt(li.quantity) || 1 }));
+      .map((li) => ({
+        name: li.name,
+        price: parseFloat(li.price) || 0,
+        quantity: parseInt(li.quantity) || 1,
+        hsnCode: li.hsnCode || undefined,
+      }));
     if (items.length === 0) return;
     onSubmit({
       customerName: customerName.trim(),
@@ -99,11 +124,27 @@ function InvoiceForm({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Customer GSTIN</Label>
-          <Input value={customerGstin} onChange={(e) => setCustomerGstin(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+          <Input
+            value={customerGstin}
+            onChange={(e) => handleGstinChange(e.target.value)}
+            placeholder="22AAAAA0000A1Z5"
+            maxLength={15}
+            className={gstinError ? "border-destructive" : ""}
+          />
+          {gstinError && (
+            <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" /> {gstinError}
+            </p>
+          )}
+          {customerGstin && !gstinError && (
+            <p className="text-xs text-muted-foreground mt-1">
+              {classifyB2BorB2C(customerGstin) === "B2B" ? "🏢 B2B Transaction" : "🛒 B2C Transaction"}
+            </p>
+          )}
         </div>
         <div>
           <Label>Place of Supply</Label>
-          <Select value={placeOfSupply} onValueChange={setPlaceOfSupply}>
+          <Select value={placeOfSupply} onValueChange={(v) => setPlaceOfSupply(v)}>
             <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
             <SelectContent>
               {INDIAN_STATES.map((s) => (
@@ -113,38 +154,77 @@ function InvoiceForm({
           </Select>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Checkbox checked={isInterstate} onCheckedChange={(v) => setIsInterstate(v === true)} id="interstate" />
-        <Label htmlFor="interstate" className="text-sm cursor-pointer">Inter-state supply (IGST)</Label>
+
+      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+        <input
+          type="checkbox"
+          checked={isInterstate}
+          onChange={(e) => setIsInterstate(e.target.checked)}
+          id="interstate"
+          className="rounded border-input"
+        />
+        <Label htmlFor="interstate" className="text-sm cursor-pointer font-normal">
+          Inter-state supply → {isInterstate ? <span className="font-medium text-primary">IGST applies</span> : <span className="font-medium">CGST + SGST applies</span>}
+        </Label>
       </div>
 
       <div className="space-y-3">
         <Label>Line Items</Label>
         {lineItems.map((item, idx) => (
-          <div key={idx} className="flex gap-2 items-end">
-            <div className="flex-1">
-              <Input placeholder="Item name" value={item.name} onChange={(e) => updateLineItem(idx, "name", e.target.value)} />
+          <div key={idx} className="space-y-1">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input placeholder="Item name" value={item.name} onChange={(e) => updateLineItem(idx, "name", e.target.value)} />
+              </div>
+              <div className="w-24">
+                <Input placeholder="HSN" value={item.hsnCode || ""} onChange={(e) => updateLineItem(idx, "hsnCode", e.target.value)} className="font-mono text-xs" />
+              </div>
+              <div className="w-16">
+                <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateLineItem(idx, "quantity", e.target.value)} />
+              </div>
+              <div className="w-24">
+                <Input type="number" step="0.01" placeholder="Price" value={item.price} onChange={(e) => updateLineItem(idx, "price", e.target.value)} />
+              </div>
+              {lineItems.length > 1 && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeLineItem(idx)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
-            <div className="w-20">
-              <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateLineItem(idx, "quantity", e.target.value)} />
-            </div>
-            <div className="w-24">
-              <Input type="number" step="0.01" placeholder="Price" value={item.price} onChange={(e) => updateLineItem(idx, "price", e.target.value)} />
-            </div>
-            {lineItems.length > 1 && (
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeLineItem(idx)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         ))}
         <Button type="button" variant="outline" size="sm" onClick={addLineItem}>+ Add Item</Button>
       </div>
-      <div className="w-32">
-        <Label>GST Rate (%)</Label>
-        <Input type="number" step="0.1" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
+
+      <div className="w-40">
+        <Label>GST Rate</Label>
+        <Select value={taxRate} onValueChange={setTaxRate}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {VALID_GST_RATES.map((r) => (
+              <SelectItem key={r} value={String(r)}>{r}%</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <Button type="submit" className="w-full" disabled={submitting}>
+
+      {/* Live Tax Preview */}
+      {preview.subtotal > 0 && (
+        <div className="rounded-md border p-3 space-y-1 text-sm bg-muted/30">
+          <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{preview.subtotal.toFixed(2)}</span></div>
+          {isInterstate ? (
+            <div className="flex justify-between"><span className="text-muted-foreground">IGST ({taxRate}%)</span><span>{preview.igst.toFixed(2)}</span></div>
+          ) : (
+            <>
+              <div className="flex justify-between"><span className="text-muted-foreground">CGST ({(parseFloat(taxRate) || 0) / 2}%)</span><span>{preview.cgst.toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">SGST ({(parseFloat(taxRate) || 0) / 2}%)</span><span>{preview.sgst.toFixed(2)}</span></div>
+            </>
+          )}
+          <div className="flex justify-between font-bold border-t pt-1"><span>Total</span><span>{preview.total.toFixed(2)}</span></div>
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={submitting || !!gstinError}>
         {submitting ? "Saving..." : submitLabel}
       </Button>
     </form>
@@ -160,6 +240,8 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
   onMarkPaid: () => void;
   markingPaid: boolean;
 }) {
+  const classification = classifyB2BorB2C(invoice.customerGstin);
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start">
@@ -171,17 +253,21 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Status</span>
             <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>{invoice.status}</Badge>
+            <Badge variant="outline" className="text-xs">{classification}</Badge>
           </div>
           {invoice.customerGstin && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">GSTIN</span>
-              <span className="font-mono text-xs">{invoice.customerGstin}</span>
+              <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">{invoice.customerGstin}</span>
             </div>
           )}
           {invoice.placeOfSupply && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Place of Supply</span>
               <span>{invoice.placeOfSupply}</span>
+              <Badge variant="outline" className="text-xs">
+                {invoice.isInterstate ? "Inter-state" : "Intra-state"}
+              </Badge>
             </div>
           )}
         </div>
@@ -223,6 +309,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           <TableHeader>
             <TableRow>
               <TableHead>Item</TableHead>
+              <TableHead>HSN</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Total</TableHead>
@@ -232,6 +319,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
             {invoice.lineItems.map((li) => (
               <TableRow key={li.id}>
                 <TableCell>{li.name}</TableCell>
+                <TableCell className="font-mono text-xs text-muted-foreground">{li.hsnCode || "—"}</TableCell>
                 <TableCell className="text-right">{li.quantity}</TableCell>
                 <TableCell className="text-right">{formatCurrency(li.price, currency as any)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(li.total, currency as any)}</TableCell>
@@ -240,24 +328,26 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           </TableBody>
         </Table>
       </div>
-      <div className="space-y-1 text-sm text-right">
+
+      {/* GST Breakdown */}
+      <div className="rounded-md border p-3 space-y-1.5 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatCurrency(invoice.subtotal, currency as any)}</span>
         </div>
         {invoice.isInterstate ? (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">IGST ({invoice.taxRate}%)</span>
+          <div className="flex justify-between text-primary">
+            <span>IGST ({invoice.taxRate}%)</span>
             <span>{formatCurrency(invoice.igstAmount || 0, currency as any)}</span>
           </div>
         ) : (
           <>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">CGST ({invoice.taxRate / 2}%)</span>
+            <div className="flex justify-between text-primary">
+              <span>CGST ({invoice.taxRate / 2}%)</span>
               <span>{formatCurrency(invoice.cgstAmount || 0, currency as any)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">SGST ({invoice.taxRate / 2}%)</span>
+            <div className="flex justify-between text-primary">
+              <span>SGST ({invoice.taxRate / 2}%)</span>
               <span>{formatCurrency(invoice.sgstAmount || 0, currency as any)}</span>
             </div>
           </>
@@ -335,7 +425,6 @@ export default function Invoices() {
     }));
     const subtotal = lineItems.reduce((s, li) => s + li.total, 0);
 
-    const { calculateGST } = await import("@/lib/gst");
     const gst = calculateGST(subtotal, data.taxRate, data.isInterstate || false);
     const total = subtotal + gst.totalTax;
 
@@ -405,6 +494,7 @@ export default function Invoices() {
                     <TableRow>
                       <TableHead>Invoice #</TableHead>
                       <TableHead>Customer</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Date</TableHead>
@@ -415,6 +505,11 @@ export default function Invoices() {
                       <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
                         <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                         <TableCell>{inv.customerName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {classifyB2BorB2C(inv.customerGstin)}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
                         </TableCell>
@@ -463,6 +558,7 @@ export default function Invoices() {
                     name: li.name,
                     price: String(li.price),
                     quantity: String(li.quantity),
+                    hsnCode: li.hsnCode,
                   })),
                   customerGstin: editInvoice.customerGstin,
                   placeOfSupply: editInvoice.placeOfSupply,
