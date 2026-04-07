@@ -8,6 +8,7 @@ import {
   Scale,
   ArrowLeftRight,
   BarChart3,
+  BookOpen,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import {
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Invoices", path: "/invoices", icon: FileText },
   { label: "Expenses", path: "/expenses", icon: Receipt },
   { label: "Profit & Loss", path: "/reports/profit-loss", icon: BarChart3 },
+  { label: "Balance Sheet", path: "/reports/balance-sheet", icon: BookOpen },
   { label: "Trial Balance", path: "/reports/trial-balance", icon: Scale },
   { label: "Reconciliation", path: "/reconciliation", icon: ArrowLeftRight },
 ];
