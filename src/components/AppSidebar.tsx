@@ -48,6 +48,7 @@ export function AppSidebar() {
       createOrganization(newOrgName.trim(), newOrgCurrency);
       setNewOrgName("");
       setShowNewOrg(false);
+      setNewOrgCurrency("INR");
     }
   };
 
@@ -76,7 +77,7 @@ export function AppSidebar() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm font-medium">
               <Building2 className="h-4 w-4 text-primary" />
-              <span className="flex-1 text-left truncate">{currentOrg?.name}</span>
+              <span className="flex-1 text-left truncate">{currentOrg?.name || "Loading..."}</span>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
@@ -97,23 +98,19 @@ export function AppSidebar() {
                 <Input
                   value={newOrgName}
                   onChange={(e) => setNewOrgName(e.target.value)}
-                  placeholder="Org name"
+                  placeholder="Organization name"
                   className="h-8 text-xs"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateOrg()}
                 />
                 <Select value={newOrgCurrency} onValueChange={(v) => setNewOrgCurrency(v as CurrencyCode)}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {ALL_CURRENCIES.map((c) => (
                       <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="sm" className="h-8 text-xs w-full" onClick={handleCreateOrg}>
-                  Create
-                </Button>
+                <Button size="sm" className="h-8 text-xs w-full" onClick={handleCreateOrg}>Create</Button>
               </div>
             ) : (
               <DropdownMenuItem onClick={() => setShowNewOrg(true)}>
@@ -122,11 +119,9 @@ export function AppSidebar() {
             )}
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5">
-              <p className="text-xs text-muted-foreground mb-1">Currency</p>
+              <p className="text-xs text-muted-foreground mb-1">Base Currency</p>
               <Select value={currentOrg?.currency || "INR"} onValueChange={(v) => handleCurrencyChange(v as CurrencyCode)}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ALL_CURRENCIES.map((c) => (
                     <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
@@ -164,7 +159,7 @@ export function AppSidebar() {
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium truncate">{user?.email}</p>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSignOut}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSignOut} title="Sign out">
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

@@ -17,11 +17,16 @@ export default function Auth() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     try {
       if (isSignUp) {
-        await signUp(email, password, fullName);
-        toast.success("Account created! Check your email to verify.");
+        if (!fullName.trim()) {
+          toast.error("Please enter your name");
+          return;
+        }
+        await signUp(email, password, fullName.trim());
+        toast.success("Account created! Check your email to verify, then sign in.");
       } else {
         await signIn(email, password);
         toast.success("Welcome back!");
@@ -41,11 +46,13 @@ export default function Auth() {
             <BookOpen className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold">LedgerFlow</span>
           </div>
-          <CardTitle>{isSignUp ? "Create Account" : "Sign In"}</CardTitle>
+          <CardTitle className="text-xl">
+            {isSignUp ? "Create your account" : "Welcome back"}
+          </CardTitle>
           <CardDescription>
             {isSignUp
-              ? "Start managing your accounting"
-              : "Sign in to your account"}
+              ? "Start managing your accounting in minutes"
+              : "Sign in to continue to your dashboard"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,8 +63,9 @@ export default function Auth() {
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your name"
-                  required
+                  placeholder="Your full name"
+                  required={isSignUp}
+                  autoComplete="name"
                 />
               </div>
             )}
@@ -69,6 +77,7 @@ export default function Auth() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                autoComplete="email"
               />
             </div>
             <div>
@@ -80,16 +89,17 @@ export default function Auth() {
                 placeholder="••••••••"
                 required
                 minLength={6}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
             </Button>
           </form>
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => { setIsSignUp(!isSignUp); setFullName(""); }}
               className="text-sm text-primary hover:underline"
             >
               {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}

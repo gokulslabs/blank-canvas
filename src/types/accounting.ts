@@ -4,8 +4,8 @@ import { CurrencyCode } from "@/lib/currency";
 
 export interface Profile {
   id: string;
+  email: string;
   fullName: string;
-  avatarUrl?: string;
   createdAt: string;
 }
 
@@ -13,7 +13,15 @@ export interface Organization {
   id: string;
   name: string;
   currency: CurrencyCode;
-  userId?: string;
+  ownerId?: string;
+  createdAt: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  userId: string;
+  organizationId: string;
+  role: "owner" | "accountant";
   createdAt: string;
 }
 
@@ -31,7 +39,7 @@ export interface LineItem {
   quantity: number;
   price: number;
   total: number;
-  taxRate?: number; // GST rate per line item
+  taxRate?: number;
 }
 
 export interface Invoice {
@@ -68,7 +76,6 @@ export interface Expense {
   reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
-  // Multi-currency
   currency?: CurrencyCode;
 }
 
@@ -120,7 +127,6 @@ export interface ProfitAndLoss {
   profit: number;
 }
 
-/** Trial Balance row */
 export interface TrialBalanceRow {
   accountId: string;
   accountName: string;
@@ -137,7 +143,6 @@ export interface TrialBalanceReport {
   isBalanced: boolean;
 }
 
-/** Bank transaction for reconciliation */
 export interface BankTransaction {
   id: string;
   organizationId: string;
@@ -151,7 +156,6 @@ export interface BankTransaction {
   createdAt: string;
 }
 
-/** GST Summary */
 export interface GSTSummary {
   totalTaxableValue: number;
   totalCGST: number;
