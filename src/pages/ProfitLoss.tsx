@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Download } from "lucide-react";
 import { useProfitLoss } from "@/hooks/useProfitLoss";
+import { downloadCSV } from "@/lib/csvExport";
 import { useRevenueOverTime, useExpensesByCategory } from "@/hooks/useDashboard";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -64,12 +65,25 @@ export default function ProfitLoss() {
   const { data: revenueData = [] } = useRevenueOverTime(orgId);
   const { data: expenseCategories = [] } = useExpensesByCategory(orgId);
 
+  const handleExport = () => {
+    if (!pnl) return;
+    downloadCSV("profit-and-loss.csv",
+      ["Category", "Amount"],
+      [["Revenue", pnl.revenue], ["Expenses", pnl.expenses], ["Net Profit", pnl.profit]]
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Profit & Loss</h1>
-          <p className="text-sm text-muted-foreground mt-1">Revenue, expenses, and net profit</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Profit & Loss</h1>
+            <p className="text-sm text-muted-foreground mt-1">Revenue, expenses, and net profit</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!pnl}>
+            <Download className="h-4 w-4 mr-1" /> Export CSV
+          </Button>
         </div>
 
         {/* Filters */}

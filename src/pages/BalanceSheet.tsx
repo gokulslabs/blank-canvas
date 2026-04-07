@@ -8,7 +8,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useBalanceSheet, BalanceSheetRow } from "@/hooks/useBalanceSheet";
-import { CheckCircle, AlertTriangle } from "lucide-react";
+import { CheckCircle, AlertTriangle, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { downloadCSV } from "@/lib/csvExport";
 
 function AccountSection({ title, rows, currency, color }: {
   title: string;
@@ -57,6 +59,19 @@ export default function BalanceSheet() {
   const { currentOrg, currency } = useApp();
   const { data, isLoading } = useBalanceSheet(currentOrg?.id);
 
+  const handleExport = () => {
+    if (!data) return;
+    const headers = ["Section", "Code", "Account", "Balance"];
+    const rows: (string | number)[][] = [];
+    const addSection = (label: string, items: BalanceSheetRow[]) => {
+      items.forEach((r) => rows.push([label, r.accountCode, r.accountName, r.balance]));
+    };
+    addSection("Assets", data.assets);
+    addSection("Liabilities", data.liabilities);
+    addSection("Equity", data.equity);
+    downloadCSV("balance-sheet.csv", headers, rows);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -67,18 +82,23 @@ export default function BalanceSheet() {
               Assets, Liabilities & Equity — {currentOrg?.name}
             </p>
           </div>
-          {data && (
-            <Badge
-              variant={data.isBalanced ? "default" : "destructive"}
-              className="text-sm py-1 px-3"
-            >
-              {data.isBalanced ? (
-                <><CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Balanced</>
-              ) : (
-                <><AlertTriangle className="h-3.5 w-3.5 mr-1.5" /> Unbalanced</>
-              )}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={!data}>
+              <Download className="h-4 w-4 mr-1" /> Export CSV
+            </Button>
+            {data && (
+              <Badge
+                variant={data.isBalanced ? "default" : "destructive"}
+                className="text-sm py-1 px-3"
+              >
+                {data.isBalanced ? (
+                  <><CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Balanced</>
+                ) : (
+                  <><AlertTriangle className="h-3.5 w-3.5 mr-1.5" /> Unbalanced</>
+                )}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {isLoading ? (
