@@ -342,6 +342,7 @@ export default function Invoices() {
               <InvoiceDetail
                 invoice={detailInvoice}
                 currency={currency}
+                orgName={currentOrg?.name || "My Business"}
                 onEdit={() => setEditInvoice(detailInvoice)}
                 onDelete={() => handleDelete(detailInvoice.id)}
                 onMarkPaid={() => handleMarkPaid(detailInvoice)}
