@@ -57,9 +57,8 @@ export default function Expenses() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
 
-  const orgExpenses = expenses.filter(
-    (e) => e.organizationId === currentOrg?.id
-  );
+  // Expenses are already filtered by org in context
+  const orgExpenses = expenses;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
