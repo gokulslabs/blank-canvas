@@ -76,9 +76,8 @@ export async function createJournalEntry(input: CreateJournalEntryInput): Promis
     credit: l.credit,
   }));
 
-  // Insert entry then lines (transaction-like — if lines fail, entry is orphaned but harmless)
-  await journalRepo.insertEntry(entry);
-  await journalRepo.insertLines(lines);
+  // Atomic insert: entry + lines in a single call to avoid partial writes
+  await journalRepo.insertEntryWithLines(entry, lines);
 
   console.log(`[Ledger] Journal entry created: ${entry.description}`, {
     id: entry.id,

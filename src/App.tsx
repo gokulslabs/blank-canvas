@@ -11,6 +11,8 @@ import TrialBalance from "./pages/TrialBalance";
 import Reconciliation from "./pages/Reconciliation";
 import ProfitLoss from "./pages/ProfitLoss";
 import BalanceSheet from "./pages/BalanceSheet";
+import GeneralLedger from "./pages/GeneralLedger";
+import ARAging from "./pages/ARAging";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
             <Route path="/reports/trial-balance" element={<TrialBalance />} />
             <Route path="/reports/profit-loss" element={<ProfitLoss />} />
             <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
+            <Route path="/reports/general-ledger" element={<GeneralLedger />} />
+            <Route path="/reports/ar-aging" element={<ARAging />} />
             <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
