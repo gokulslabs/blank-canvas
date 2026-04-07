@@ -98,9 +98,8 @@ export default function Invoices() {
     { name: "", price: "", quantity: "1" },
   ]);
 
-  const orgInvoices = invoices.filter(
-    (i) => i.organizationId === currentOrg?.id
-  );
+  // Invoices are already filtered by org in context
+  const orgInvoices = invoices;
 
   const addLineItem = () =>
     setLineItems([...lineItems, { name: "", price: "", quantity: "1" }]);

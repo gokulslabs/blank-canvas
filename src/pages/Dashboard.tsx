@@ -2,6 +2,7 @@ import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/AppLayout";
 import {
   DollarSign,
+  Wallet,
   TrendingUp,
   TrendingDown,
   FileText,
@@ -54,15 +55,8 @@ export default function Dashboard() {
   const { getDashboardData, invoices, expenses, currentOrg } = useApp();
   const data = getDashboardData();
 
-  const recentInvoices = invoices
-    .filter((i) => i.organizationId === currentOrg?.id)
-    .slice(-5)
-    .reverse();
-
-  const recentExpenses = expenses
-    .filter((e) => e.organizationId === currentOrg?.id)
-    .slice(-5)
-    .reverse();
+  const recentInvoices = invoices.slice(-5).reverse();
+  const recentExpenses = expenses.slice(-5).reverse();
 
   return (
     <AppLayout>
@@ -75,7 +69,8 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Ledger-derived stats — all figures come from journal lines */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Revenue"
             value={formatCurrency(data.totalRevenue)}
@@ -94,9 +89,15 @@ export default function Dashboard() {
             icon={DollarSign}
             trend={data.profit >= 0 ? "up" : "down"}
           />
+          <StatCard
+            title="Cash Balance"
+            value={formatCurrency(data.cashBalance)}
+            icon={Wallet}
+            trend={data.cashBalance >= 0 ? "up" : "down"}
+          />
         </div>
 
-        {/* Quick Stats */}
+        {/* Counts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard
             title="Invoices"
