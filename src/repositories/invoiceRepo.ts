@@ -55,6 +55,27 @@ export const invoiceRepo = {
       .eq("id", id);
     if (error) throw error;
   },
+
+  async update(invoice: Invoice): Promise<void> {
+    const { error } = await supabase
+      .from("invoices")
+      .update({
+        customer_name: invoice.customerName,
+        line_items: invoice.lineItems,
+        tax_rate: invoice.taxRate,
+        subtotal: invoice.subtotal,
+        tax_amount: invoice.taxAmount,
+        total: invoice.total,
+        status: invoice.status,
+      })
+      .eq("id", invoice.id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("invoices").delete().eq("id", id);
+    if (error) throw error;
+  },
 };
 
 function mapRow(row: any): Invoice {

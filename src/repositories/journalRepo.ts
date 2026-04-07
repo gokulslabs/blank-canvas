@@ -72,6 +72,39 @@ export const journalRepo = {
     if (error) throw error;
     return (data || []).map(mapLine);
   },
+
+  async findEntriesByReference(referenceId: string): Promise<JournalEntry[]> {
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("reference_id", referenceId);
+    if (error) throw error;
+    return (data || []).map(mapEntry);
+  },
+
+  async deleteEntry(id: string): Promise<void> {
+    // Delete lines first, then entry
+    const { error: linesError } = await supabase
+      .from("journal_lines")
+      .delete()
+      .eq("journal_entry_id", id);
+    if (linesError) throw linesError;
+    const { error } = await supabase
+      .from("journal_entries")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async findEntriesByOrgWithDates(organizationId: string): Promise<JournalEntry[]> {
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("date", { ascending: true });
+    if (error) throw error;
+    return (data || []).map(mapEntry);
+  },
 };
 
 function mapEntry(row: any): JournalEntry {
