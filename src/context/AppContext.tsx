@@ -14,6 +14,7 @@ import { accountRepo } from "@/repositories/accountRepo";
 import { invoiceRepo } from "@/repositories/invoiceRepo";
 import { expenseRepo } from "@/repositories/expenseRepo";
 import { organizationRepo } from "@/repositories/organizationRepo";
+import { organizationMemberRepo } from "@/repositories/organizationMemberRepo";
 import { useAuth } from "@/context/AuthContext";
 import { calculateGST } from "@/lib/gst";
 
@@ -59,26 +60,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const currency: CurrencyCode = currentOrg?.currency || "INR";
 
+  // Load organizations the user is a member of
   useEffect(() => {
     if (!user) return;
     (async () => {
       try {
-        const orgs = await organizationRepo.findAll();
-        if (orgs.length === 0) {
-          // Auto-create first organization for new user
+        // Get org IDs user is a member of
+        const memberships = await organizationMemberRepo.findByUser(user.id);
+        
+        if (memberships.length === 0) {
+          // New user: create default org + membership
+          const orgId = crypto.randomUUID();
           const org: Organization = {
-            id: crypto.randomUUID(),
+            id: orgId,
             name: "My Business",
             currency: "INR",
-            userId: user.id,
+            ownerId: user.id,
             createdAt: new Date().toISOString(),
           };
           await organizationRepo.insert(org);
+          await organizationMemberRepo.insert({
+            userId: user.id,
+            organizationId: orgId,
+            role: "owner",
+          });
           setOrganizations([org]);
           setCurrentOrg(org);
         } else {
+          // Load orgs by IDs from memberships
+          const orgIds = memberships.map((m) => m.organizationId);
+          const orgs = await organizationRepo.findByIds(orgIds);
           setOrganizations(orgs);
-          setCurrentOrg(orgs[0]);
+          // Restore last selected org from localStorage or use first
+          const lastOrgId = localStorage.getItem("ledgerflow_current_org");
+          const restored = orgs.find((o) => o.id === lastOrgId);
+          setCurrentOrg(restored || orgs[0]);
         }
       } catch (err) {
         console.error("Failed to load organizations:", err);
@@ -98,7 +114,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (currentOrg) loadOrgData(currentOrg.id);
+    if (currentOrg) {
+      loadOrgData(currentOrg.id);
+      localStorage.setItem("ledgerflow_current_org", currentOrg.id);
+    }
   }, [currentOrg, loadOrgData]);
 
   const refreshData = useCallback(async () => {
@@ -107,14 +126,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createOrganization = useCallback(async (name: string, cur: CurrencyCode = "INR") => {
     if (!user) return;
+    const orgId = crypto.randomUUID();
     const org: Organization = {
-      id: crypto.randomUUID(),
+      id: orgId,
       name,
       currency: cur,
-      userId: user.id,
+      ownerId: user.id,
       createdAt: new Date().toISOString(),
     };
     await organizationRepo.insert(org);
+    await organizationMemberRepo.insert({
+      userId: user.id,
+      organizationId: orgId,
+      role: "owner",
+    });
     setOrganizations((prev) => [...prev, org]);
     setCurrentOrg(org);
   }, [user]);

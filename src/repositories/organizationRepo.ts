@@ -13,6 +13,17 @@ export const organizationRepo = {
     return (data || []).map(mapRow);
   },
 
+  async findByIds(ids: string[]): Promise<Organization[]> {
+    if (ids.length === 0) return [];
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("*")
+      .in("id", ids)
+      .order("created_at");
+    if (error) throw error;
+    return (data || []).map(mapRow);
+  },
+
   async findById(id: string): Promise<Organization | undefined> {
     const { data, error } = await supabase.from("organizations").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
@@ -24,7 +35,7 @@ export const organizationRepo = {
       id: org.id,
       name: org.name,
       currency: org.currency,
-      user_id: org.userId,
+      owner_id: org.ownerId,
       created_at: org.createdAt,
     });
     if (error) throw error;
@@ -44,7 +55,7 @@ function mapRow(row: any): Organization {
     id: row.id,
     name: row.name,
     currency: (row.currency || "INR") as CurrencyCode,
-    userId: row.user_id,
+    ownerId: row.owner_id,
     createdAt: row.created_at,
   };
 }
