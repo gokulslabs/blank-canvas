@@ -35,6 +35,7 @@ export interface Invoice {
   taxAmount: number;
   total: number;
   status: "draft" | "sent" | "paid";
+  reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
 }
@@ -46,6 +47,7 @@ export interface Expense {
   category: string;
   date: string;
   description?: string;
+  reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
 }
@@ -88,10 +90,43 @@ export interface DashboardData {
   cashBalance: number;
   invoiceCount: number;
   expenseCount: number;
+  unreconciledCount: number;
+  reconciliationProgress: number;
 }
 
 export interface ProfitAndLoss {
   revenue: number;
   expenses: number;
   profit: number;
+}
+
+/** Trial Balance row */
+export interface TrialBalanceRow {
+  accountId: string;
+  accountName: string;
+  accountCode: string;
+  accountType: Account["type"];
+  debitBalance: number;
+  creditBalance: number;
+}
+
+export interface TrialBalanceReport {
+  rows: TrialBalanceRow[];
+  totalDebits: number;
+  totalCredits: number;
+  isBalanced: boolean;
+}
+
+/** Bank transaction for reconciliation */
+export interface BankTransaction {
+  id: string;
+  organizationId: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: "credit" | "debit";
+  status: "unmatched" | "matched";
+  referenceId?: string;
+  referenceType?: "invoice" | "expense";
+  createdAt: string;
 }
