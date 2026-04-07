@@ -13,6 +13,19 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react/jsx-runtime",
+      "react/jsx-dev-runtime",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-collapsible",
+      "@radix-ui/react-alert-dialog",
+      "@tanstack/react-query",
+      "recharts",
+    ],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
