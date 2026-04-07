@@ -17,6 +17,7 @@ import GeneralLedger from "./pages/GeneralLedger";
 import ARAging from "./pages/ARAging";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import GSTReport from "./pages/GSTReport";
+import TeamMembers from "./pages/TeamMembers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ function ProtectedRoutes() {
         <Route path="/reports/ar-aging" element={<ARAging />} />
         <Route path="/reports/gst" element={<GSTReport />} />
         <Route path="/reconciliation" element={<Reconciliation />} />
+        <Route path="/team" element={<TeamMembers />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppProvider>
