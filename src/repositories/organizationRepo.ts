@@ -24,8 +24,17 @@ export const organizationRepo = {
       id: org.id,
       name: org.name,
       currency: org.currency,
+      user_id: org.userId,
       created_at: org.createdAt,
     });
+    if (error) throw error;
+  },
+
+  async updateCurrency(id: string, currency: CurrencyCode): Promise<void> {
+    const { error } = await supabase
+      .from("organizations")
+      .update({ currency })
+      .eq("id", id);
     if (error) throw error;
   },
 };
@@ -35,6 +44,7 @@ function mapRow(row: any): Organization {
     id: row.id,
     name: row.name,
     currency: (row.currency || "INR") as CurrencyCode,
+    userId: row.user_id,
     createdAt: row.created_at,
   };
 }

@@ -4,6 +4,7 @@
 
 import { Invoice } from "@/types/accounting";
 import { supabase } from "@/integrations/supabase/client";
+import { CurrencyCode } from "@/lib/currency";
 
 export const invoiceRepo = {
   async insert(invoice: Invoice): Promise<void> {
@@ -20,6 +21,13 @@ export const invoiceRepo = {
       status: invoice.status,
       reconciliation_status: invoice.reconciliationStatus,
       created_at: invoice.createdAt,
+      customer_gstin: invoice.customerGstin || '',
+      place_of_supply: invoice.placeOfSupply || '',
+      is_interstate: invoice.isInterstate || false,
+      cgst_amount: invoice.cgstAmount || 0,
+      sgst_amount: invoice.sgstAmount || 0,
+      igst_amount: invoice.igstAmount || 0,
+      currency: invoice.currency || 'INR',
     });
     if (error) throw error;
   },
@@ -67,6 +75,13 @@ export const invoiceRepo = {
         tax_amount: invoice.taxAmount,
         total: invoice.total,
         status: invoice.status,
+        customer_gstin: invoice.customerGstin || '',
+        place_of_supply: invoice.placeOfSupply || '',
+        is_interstate: invoice.isInterstate || false,
+        cgst_amount: invoice.cgstAmount || 0,
+        sgst_amount: invoice.sgstAmount || 0,
+        igst_amount: invoice.igstAmount || 0,
+        currency: invoice.currency || 'INR',
       })
       .eq("id", invoice.id);
     if (error) throw error;
@@ -92,5 +107,12 @@ function mapRow(row: any): Invoice {
     status: row.status,
     reconciliationStatus: row.reconciliation_status || "unreconciled",
     createdAt: row.created_at,
+    customerGstin: row.customer_gstin || '',
+    placeOfSupply: row.place_of_supply || '',
+    isInterstate: row.is_interstate || false,
+    cgstAmount: Number(row.cgst_amount || 0),
+    sgstAmount: Number(row.sgst_amount || 0),
+    igstAmount: Number(row.igst_amount || 0),
+    currency: (row.currency || 'INR') as CurrencyCode,
   };
 }
