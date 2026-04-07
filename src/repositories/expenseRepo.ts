@@ -4,6 +4,7 @@
 
 import { Expense } from "@/types/accounting";
 import { supabase } from "@/integrations/supabase/client";
+import { CurrencyCode } from "@/lib/currency";
 
 export const expenseRepo = {
   async insert(expense: Expense): Promise<void> {
@@ -17,6 +18,7 @@ export const expenseRepo = {
       description: expense.description,
       reconciliation_status: expense.reconciliationStatus,
       created_at: expense.createdAt,
+      currency: expense.currency || 'INR',
     });
     if (error) throw error;
   },
@@ -62,6 +64,7 @@ export const expenseRepo = {
         category: expense.category,
         date: expense.date,
         description: expense.description,
+        currency: expense.currency || 'INR',
       })
       .eq("id", expense.id);
     if (error) throw error;
@@ -84,5 +87,6 @@ function mapRow(row: any): Expense {
     description: row.description,
     reconciliationStatus: row.reconciliation_status || "unreconciled",
     createdAt: row.created_at,
+    currency: (row.currency || 'INR') as CurrencyCode,
   };
 }

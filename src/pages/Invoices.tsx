@@ -15,14 +15,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Invoice, LineItem } from "@/types/accounting";
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateInvoicePDF } from "@/lib/invoicePdf";
+import { INDIAN_STATES } from "@/lib/gst";
 
 const PAGE_SIZE = 10;
 
@@ -32,14 +37,31 @@ function InvoiceForm({
   submitting,
   submitLabel,
 }: {
-  initial?: { customerName: string; taxRate: string; lineItems: { name: string; price: string; quantity: string }[] };
-  onSubmit: (data: { customerName: string; taxRate: number; lineItems: Omit<LineItem, "id" | "total">[] }) => void;
+  initial?: {
+    customerName: string;
+    taxRate: string;
+    lineItems: { name: string; price: string; quantity: string }[];
+    customerGstin?: string;
+    placeOfSupply?: string;
+    isInterstate?: boolean;
+  };
+  onSubmit: (data: {
+    customerName: string;
+    taxRate: number;
+    lineItems: Omit<LineItem, "id" | "total">[];
+    customerGstin?: string;
+    placeOfSupply?: string;
+    isInterstate?: boolean;
+  }) => void;
   submitting: boolean;
   submitLabel: string;
 }) {
   const [customerName, setCustomerName] = useState(initial?.customerName || "");
   const [taxRate, setTaxRate] = useState(initial?.taxRate || "0");
   const [lineItems, setLineItems] = useState(initial?.lineItems || [{ name: "", price: "", quantity: "1" }]);
+  const [customerGstin, setCustomerGstin] = useState(initial?.customerGstin || "");
+  const [placeOfSupply, setPlaceOfSupply] = useState(initial?.placeOfSupply || "");
+  const [isInterstate, setIsInterstate] = useState(initial?.isInterstate || false);
 
   const addLineItem = () => setLineItems([...lineItems, { name: "", price: "", quantity: "1" }]);
   const removeLineItem = (idx: number) => setLineItems(lineItems.filter((_, i) => i !== idx));
@@ -56,15 +78,46 @@ function InvoiceForm({
       .filter((li) => li.name && li.price)
       .map((li) => ({ name: li.name, price: parseFloat(li.price) || 0, quantity: parseInt(li.quantity) || 1 }));
     if (items.length === 0) return;
-    onSubmit({ customerName: customerName.trim(), lineItems: items, taxRate: parseFloat(taxRate) || 0 });
+    onSubmit({
+      customerName: customerName.trim(),
+      lineItems: items,
+      taxRate: parseFloat(taxRate) || 0,
+      customerGstin: customerGstin.trim() || undefined,
+      placeOfSupply: placeOfSupply || undefined,
+      isInterstate,
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-auto pr-1">
       <div>
         <Label>Customer Name</Label>
         <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Enter customer name" required />
       </div>
+
+      {/* GST Fields */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Customer GSTIN</Label>
+          <Input value={customerGstin} onChange={(e) => setCustomerGstin(e.target.value)} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+        </div>
+        <div>
+          <Label>Place of Supply</Label>
+          <Select value={placeOfSupply} onValueChange={setPlaceOfSupply}>
+            <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+            <SelectContent>
+              {INDIAN_STATES.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox checked={isInterstate} onCheckedChange={(v) => setIsInterstate(v === true)} id="interstate" />
+        <Label htmlFor="interstate" className="text-sm cursor-pointer">Inter-state supply (IGST)</Label>
+      </div>
+
       <div className="space-y-3">
         <Label>Line Items</Label>
         {lineItems.map((item, idx) => (
@@ -88,7 +141,7 @@ function InvoiceForm({
         <Button type="button" variant="outline" size="sm" onClick={addLineItem}>+ Add Item</Button>
       </div>
       <div className="w-32">
-        <Label>Tax Rate (%)</Label>
+        <Label>GST Rate (%)</Label>
         <Input type="number" step="0.1" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} />
       </div>
       <Button type="submit" className="w-full" disabled={submitting}>
@@ -119,6 +172,18 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
             <span className="text-muted-foreground">Status</span>
             <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>{invoice.status}</Badge>
           </div>
+          {invoice.customerGstin && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">GSTIN</span>
+              <span className="font-mono text-xs">{invoice.customerGstin}</span>
+            </div>
+          )}
+          {invoice.placeOfSupply && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Place of Supply</span>
+              <span>{invoice.placeOfSupply}</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => generateInvoicePDF(invoice, orgName, currency as any)}>
@@ -180,10 +245,23 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatCurrency(invoice.subtotal, currency as any)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span>
-          <span>{formatCurrency(invoice.taxAmount, currency as any)}</span>
-        </div>
+        {invoice.isInterstate ? (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">IGST ({invoice.taxRate}%)</span>
+            <span>{formatCurrency(invoice.igstAmount || 0, currency as any)}</span>
+          </div>
+        ) : (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">CGST ({invoice.taxRate / 2}%)</span>
+              <span>{formatCurrency(invoice.cgstAmount || 0, currency as any)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">SGST ({invoice.taxRate / 2}%)</span>
+              <span>{formatCurrency(invoice.sgstAmount || 0, currency as any)}</span>
+            </div>
+          </>
+        )}
         <div className="flex justify-between font-bold text-base pt-2 border-t">
           <span>Total</span>
           <span>{formatCurrency(invoice.total, currency as any)}</span>
@@ -197,9 +275,7 @@ function Pagination({ page, totalPages, onPageChange }: { page: number; totalPag
   if (totalPages <= 1) return null;
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t">
-      <p className="text-sm text-muted-foreground">
-        Page {page} of {totalPages}
-      </p>
+      <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
       <div className="flex gap-1">
         <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
           <ChevronLeft className="h-4 w-4" />
@@ -230,13 +306,27 @@ export default function Invoices() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = useMemo(() => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sorted, page]);
 
-  const handleCreate = async (data: { customerName: string; taxRate: number; lineItems: Omit<LineItem, "id" | "total">[] }) => {
+  const handleCreate = async (data: {
+    customerName: string;
+    taxRate: number;
+    lineItems: Omit<LineItem, "id" | "total">[];
+    customerGstin?: string;
+    placeOfSupply?: string;
+    isInterstate?: boolean;
+  }) => {
     await createMutation.mutateAsync(data);
     setCreateOpen(false);
     setPage(1);
   };
 
-  const handleUpdate = async (data: { customerName: string; taxRate: number; lineItems: Omit<LineItem, "id" | "total">[] }) => {
+  const handleUpdate = async (data: {
+    customerName: string;
+    taxRate: number;
+    lineItems: Omit<LineItem, "id" | "total">[];
+    customerGstin?: string;
+    placeOfSupply?: string;
+    isInterstate?: boolean;
+  }) => {
     if (!editInvoice) return;
     const lineItems: LineItem[] = data.lineItems.map((item) => ({
       ...item,
@@ -244,8 +334,10 @@ export default function Invoices() {
       total: item.price * item.quantity,
     }));
     const subtotal = lineItems.reduce((s, li) => s + li.total, 0);
-    const taxAmount = subtotal * (data.taxRate / 100);
-    const total = subtotal + taxAmount;
+
+    const { calculateGST } = await import("@/lib/gst");
+    const gst = calculateGST(subtotal, data.taxRate, data.isInterstate || false);
+    const total = subtotal + gst.totalTax;
 
     await updateMutation.mutateAsync({
       ...editInvoice,
@@ -253,8 +345,14 @@ export default function Invoices() {
       lineItems,
       taxRate: data.taxRate,
       subtotal,
-      taxAmount,
+      taxAmount: gst.totalTax,
       total,
+      customerGstin: data.customerGstin,
+      placeOfSupply: data.placeOfSupply,
+      isInterstate: data.isInterstate,
+      cgstAmount: gst.cgst,
+      sgstAmount: gst.sgst,
+      igstAmount: gst.igst,
     });
     setEditInvoice(null);
   };
@@ -320,7 +418,7 @@ export default function Invoices() {
                         <TableCell>
                           <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(inv.total, currency)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
                         <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
@@ -341,7 +439,7 @@ export default function Invoices() {
             {detailInvoice && (
               <InvoiceDetail
                 invoice={detailInvoice}
-                currency={currency}
+                currency={detailInvoice.currency || currency}
                 orgName={currentOrg?.name || "My Business"}
                 onEdit={() => setEditInvoice(detailInvoice)}
                 onDelete={() => handleDelete(detailInvoice.id)}
@@ -366,6 +464,9 @@ export default function Invoices() {
                     price: String(li.price),
                     quantity: String(li.quantity),
                   })),
+                  customerGstin: editInvoice.customerGstin,
+                  placeOfSupply: editInvoice.placeOfSupply,
+                  isInterstate: editInvoice.isInterstate,
                 }}
                 onSubmit={handleUpdate}
                 submitting={updateMutation.isPending}

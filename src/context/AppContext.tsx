@@ -14,6 +14,8 @@ import { accountRepo } from "@/repositories/accountRepo";
 import { invoiceRepo } from "@/repositories/invoiceRepo";
 import { expenseRepo } from "@/repositories/expenseRepo";
 import { organizationRepo } from "@/repositories/organizationRepo";
+import { useAuth } from "@/context/AuthContext";
+import { calculateGST } from "@/lib/gst";
 
 interface AppContextType {
   organizations: Organization[];
@@ -28,6 +30,10 @@ interface AppContextType {
     customerName: string;
     lineItems: Omit<LineItem, "id" | "total">[];
     taxRate: number;
+    customerGstin?: string;
+    placeOfSupply?: string;
+    isInterstate?: boolean;
+    currency?: CurrencyCode;
   }) => Promise<Invoice>;
   addExpense: (data: {
     vendorName: string;
@@ -35,6 +41,7 @@ interface AppContextType {
     category: string;
     date: string;
     description?: string;
+    currency?: CurrencyCode;
   }) => Promise<Expense>;
   getDashboardData: () => Promise<DashboardData>;
   refreshData: () => Promise<void>;
@@ -42,9 +49,8 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -54,19 +60,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const currency: CurrencyCode = currentOrg?.currency || "INR";
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
       try {
         const orgs = await organizationRepo.findAll();
-        setOrganizations(orgs);
-        const defaultOrg = orgs.find((o) => o.id === DEFAULT_ORG_ID) || orgs[0];
-        if (defaultOrg) setCurrentOrg(defaultOrg);
+        if (orgs.length === 0) {
+          // Auto-create first organization for new user
+          const org: Organization = {
+            id: crypto.randomUUID(),
+            name: "My Business",
+            currency: "INR",
+            userId: user.id,
+            createdAt: new Date().toISOString(),
+          };
+          await organizationRepo.insert(org);
+          setOrganizations([org]);
+          setCurrentOrg(org);
+        } else {
+          setOrganizations(orgs);
+          setCurrentOrg(orgs[0]);
+        }
       } catch (err) {
         console.error("Failed to load organizations:", err);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [user]);
 
   const loadOrgData = useCallback(async (orgId: string) => {
     const [inv, exp] = await Promise.all([
@@ -86,16 +106,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [currentOrg, loadOrgData]);
 
   const createOrganization = useCallback(async (name: string, cur: CurrencyCode = "INR") => {
+    if (!user) return;
     const org: Organization = {
       id: crypto.randomUUID(),
       name,
       currency: cur,
+      userId: user.id,
       createdAt: new Date().toISOString(),
     };
     await organizationRepo.insert(org);
     setOrganizations((prev) => [...prev, org]);
     setCurrentOrg(org);
-  }, []);
+  }, [user]);
 
   const switchOrganization = useCallback(
     (id: string) => {
@@ -110,6 +132,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       customerName: string;
       lineItems: Omit<LineItem, "id" | "total">[];
       taxRate: number;
+      customerGstin?: string;
+      placeOfSupply?: string;
+      isInterstate?: boolean;
+      currency?: CurrencyCode;
     }) => {
       const orgId = currentOrg?.id || "";
       const count = (await invoiceRepo.count(orgId)) + 1;
@@ -121,8 +147,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0);
-      const taxAmount = subtotal * (data.taxRate / 100);
-      const total = subtotal + taxAmount;
+      const gst = calculateGST(subtotal, data.taxRate, data.isInterstate || false);
+      const total = subtotal + gst.totalTax;
 
       const invoice: Invoice = {
         id: crypto.randomUUID(),
@@ -131,12 +157,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         lineItems,
         taxRate: data.taxRate,
         subtotal,
-        taxAmount,
+        taxAmount: gst.totalTax,
         total,
         status: "draft",
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
         organizationId: orgId,
+        customerGstin: data.customerGstin,
+        placeOfSupply: data.placeOfSupply,
+        isInterstate: data.isInterstate,
+        cgstAmount: gst.cgst,
+        sgstAmount: gst.sgst,
+        igstAmount: gst.igst,
+        currency: data.currency || currency,
       };
 
       await invoiceRepo.insert(invoice);
@@ -161,7 +194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await refreshData();
       return invoice;
     },
-    [currentOrg, refreshData]
+    [currentOrg, refreshData, currency]
   );
 
   const addExpense = useCallback(
@@ -171,6 +204,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       category: string;
       date: string;
       description?: string;
+      currency?: CurrencyCode;
     }) => {
       const orgId = currentOrg?.id || "";
 
@@ -180,6 +214,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
         organizationId: orgId,
+        currency: data.currency || currency,
       };
 
       await expenseRepo.insert(expense);
@@ -204,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await refreshData();
       return expense;
     },
-    [currentOrg, refreshData]
+    [currentOrg, refreshData, currency]
   );
 
   const getDashboardData = useCallback(async (): Promise<DashboardData> => {
