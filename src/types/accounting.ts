@@ -1,4 +1,4 @@
-// Core accounting types — structured for future PostgreSQL migration
+// Core accounting types — structured for PostgreSQL migration
 
 export interface Organization {
   id: string;
@@ -27,7 +27,7 @@ export interface Invoice {
   invoiceNumber: string;
   customerName: string;
   lineItems: LineItem[];
-  taxRate: number; // percentage, e.g. 10 = 10%
+  taxRate: number;
   subtotal: number;
   taxAmount: number;
   total: number;
@@ -47,21 +47,60 @@ export interface Expense {
   organizationId: string;
 }
 
+/**
+ * A journal entry represents a single accounting transaction.
+ * It contains multiple journal lines that must balance (total debits = total credits).
+ */
 export interface JournalEntry {
   id: string;
-  type: "invoice" | "expense";
+  organizationId: string;
   date: string;
   description: string;
-  debits: { accountId: string; amount: number }[];
-  credits: { accountId: string; amount: number }[];
-  referenceId: string; // invoice or expense ID
+  referenceType: "invoice" | "expense" | "manual";
+  referenceId: string;
   createdAt: string;
+}
+
+/**
+ * Each journal line debits OR credits a specific account.
+ * In double-entry accounting, every transaction has at least one debit and one credit line.
+ */
+export interface JournalLine {
+  id: string;
+  journalEntryId: string;
+  accountId: string;
+  debit: number;  // amount debited (0 if this is a credit line)
+  credit: number; // amount credited (0 if this is a debit line)
+}
+
+/**
+ * Input for creating a journal entry.
+ * The accounting service validates that debits === credits before persisting.
+ */
+export interface CreateJournalEntryInput {
+  organizationId: string;
+  date: string;
+  description: string;
+  referenceType: "invoice" | "expense" | "manual";
+  referenceId: string;
+  lines: {
+    accountId: string;
+    debit: number;
+    credit: number;
+  }[];
 }
 
 export interface DashboardData {
   totalRevenue: number;
   totalExpenses: number;
   profit: number;
+  cashBalance: number;
   invoiceCount: number;
   expenseCount: number;
+}
+
+export interface ProfitAndLoss {
+  revenue: number;
+  expenses: number;
+  profit: number;
 }
