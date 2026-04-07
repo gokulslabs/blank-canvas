@@ -18,10 +18,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Invoice, LineItem } from "@/types/accounting";
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
+import { generateInvoicePDF } from "@/lib/invoicePdf";
 
 const PAGE_SIZE = 10;
 
@@ -97,9 +98,10 @@ function InvoiceForm({
   );
 }
 
-function InvoiceDetail({ invoice, currency, onEdit, onDelete, onMarkPaid, markingPaid }: {
+function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPaid, markingPaid }: {
   invoice: Invoice;
   currency: string;
+  orgName: string;
   onEdit: () => void;
   onDelete: () => void;
   onMarkPaid: () => void;
@@ -119,6 +121,9 @@ function InvoiceDetail({ invoice, currency, onEdit, onDelete, onMarkPaid, markin
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => generateInvoicePDF(invoice, orgName, currency as any)}>
+            <Download className="h-3 w-3 mr-1" /> PDF
+          </Button>
           {invoice.status !== "paid" && (
             <Button variant="outline" size="sm" onClick={onMarkPaid} disabled={markingPaid} className="text-green-600 border-green-300 hover:bg-green-50">
               <CheckCircle className="h-3 w-3 mr-1" /> {markingPaid ? "Processing..." : "Mark Paid"}
@@ -337,6 +342,7 @@ export default function Invoices() {
               <InvoiceDetail
                 invoice={detailInvoice}
                 currency={currency}
+                orgName={currentOrg?.name || "My Business"}
                 onEdit={() => setEditInvoice(detailInvoice)}
                 onDelete={() => handleDelete(detailInvoice.id)}
                 onMarkPaid={() => handleMarkPaid(detailInvoice)}

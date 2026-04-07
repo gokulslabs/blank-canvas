@@ -11,6 +11,7 @@ import {
   BookOpen,
   Layers,
   Clock,
+  List,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import {
@@ -29,6 +30,7 @@ const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Invoices", path: "/invoices", icon: FileText },
   { label: "Expenses", path: "/expenses", icon: Receipt },
+  { label: "Accounts", path: "/accounts", icon: List },
   { label: "Profit & Loss", path: "/reports/profit-loss", icon: BarChart3 },
   { label: "Balance Sheet", path: "/reports/balance-sheet", icon: BookOpen },
   { label: "General Ledger", path: "/reports/general-ledger", icon: Layers },
