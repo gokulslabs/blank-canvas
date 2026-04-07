@@ -197,7 +197,7 @@ export default function TeamMembers() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Pending Invites</p>
               </div>
-              <p className="text-2xl font-bold mt-1 text-amber-600">{pendingInvitations.length}</p>
+              <p className="text-2xl font-bold mt-1 text-warning">{pendingInvitations.length}</p>
             </CardContent>
           </Card>
           <Card>
