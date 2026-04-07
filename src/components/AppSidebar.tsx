@@ -5,6 +5,8 @@ import {
   Receipt,
   Building2,
   ChevronDown,
+  Scale,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import {
@@ -23,6 +25,8 @@ const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Invoices", path: "/invoices", icon: FileText },
   { label: "Expenses", path: "/expenses", icon: Receipt },
+  { label: "Trial Balance", path: "/reports/trial-balance", icon: Scale },
+  { label: "Reconciliation", path: "/reconciliation", icon: ArrowLeftRight },
 ];
 
 export function AppSidebar() {
@@ -42,7 +46,6 @@ export function AppSidebar() {
 
   return (
     <aside className="w-60 border-r border-border bg-card flex flex-col h-screen shrink-0">
-      {/* Organization Switcher */}
       <div className="p-4 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -89,7 +92,6 @@ export function AppSidebar() {
         </DropdownMenu>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -111,9 +113,8 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="p-4 border-t border-border">
-        <p className="text-xs text-muted-foreground">LedgerFlow v1.0</p>
+        <p className="text-xs text-muted-foreground">LedgerFlow v2.0</p>
       </div>
     </aside>
   );
