@@ -3,6 +3,7 @@ import { invoiceRepo } from "@/repositories/invoiceRepo";
 import { accountRepo } from "@/repositories/accountRepo";
 import { createJournalEntry, deleteJournalEntriesByReference } from "@/services/accountingService";
 import { Invoice, LineItem } from "@/types/accounting";
+import { calculateGST } from "@/lib/gst";
 import { toast } from "sonner";
 
 function invalidateAll(qc: ReturnType<typeof useQueryClient>, orgId: string | undefined) {
@@ -11,6 +12,7 @@ function invalidateAll(qc: ReturnType<typeof useQueryClient>, orgId: string | un
   qc.invalidateQueries({ queryKey: ["pnl"] });
   qc.invalidateQueries({ queryKey: ["balance-sheet", orgId] });
   qc.invalidateQueries({ queryKey: ["revenue-over-time", orgId] });
+  qc.invalidateQueries({ queryKey: ["gst-report", orgId] });
 }
 
 export function useInvoices(orgId: string | undefined) {
@@ -28,6 +30,9 @@ export function useCreateInvoice(orgId: string | undefined) {
       customerName: string;
       lineItems: Omit<LineItem, "id" | "total">[];
       taxRate: number;
+      customerGstin?: string;
+      placeOfSupply?: string;
+      isInterstate?: boolean;
     }) => {
       const id = orgId || "";
       const count = (await invoiceRepo.count(id)) + 1;
@@ -37,8 +42,8 @@ export function useCreateInvoice(orgId: string | undefined) {
         total: item.price * item.quantity,
       }));
       const subtotal = lineItems.reduce((s, li) => s + li.total, 0);
-      const taxAmount = subtotal * (data.taxRate / 100);
-      const total = subtotal + taxAmount;
+      const gst = calculateGST(subtotal, data.taxRate, data.isInterstate || false);
+      const total = subtotal + gst.totalTax;
 
       const invoice: Invoice = {
         id: crypto.randomUUID(),
@@ -47,12 +52,18 @@ export function useCreateInvoice(orgId: string | undefined) {
         lineItems,
         taxRate: data.taxRate,
         subtotal,
-        taxAmount,
+        taxAmount: gst.totalTax,
         total,
         status: "draft",
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
         organizationId: id,
+        customerGstin: data.customerGstin,
+        placeOfSupply: data.placeOfSupply,
+        isInterstate: data.isInterstate,
+        cgstAmount: gst.cgst,
+        sgstAmount: gst.sgst,
+        igstAmount: gst.igst,
       };
 
       await invoiceRepo.insert(invoice);
@@ -137,15 +148,10 @@ export function useDeleteInvoice(orgId: string | undefined) {
   });
 }
 
-/**
- * Mark an invoice as paid.
- * Creates a journal entry: Debit Cash (1000), Credit AR (1200)
- */
 export function useMarkInvoicePaid(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
-      // Update status to paid
       await invoiceRepo.update({ ...invoice, status: "paid" });
 
       const [cashAccount, arAccount] = await Promise.all([
@@ -153,7 +159,6 @@ export function useMarkInvoicePaid(orgId: string | undefined) {
         accountRepo.findByCode("1200"),
       ]);
 
-      // Payment journal entry: Cash received, AR cleared
       await createJournalEntry({
         organizationId: invoice.organizationId,
         date: new Date().toISOString(),
