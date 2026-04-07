@@ -1,32 +1,42 @@
 /**
- * Account Repository
- * 
- * Provides data access for the chart of accounts.
- * Currently backed by in-memory store; ready for PostgreSQL migration.
+ * Account Repository — Supabase-backed
  */
 
 import { Account } from "@/types/accounting";
-import { store } from "./store";
+import { supabase } from "@/integrations/supabase/client";
 
 export const accountRepo = {
-  findAll(): Account[] {
-    return [...store.accounts];
+  async findAll(): Promise<Account[]> {
+    const { data, error } = await supabase.from("accounts").select("*");
+    if (error) throw error;
+    return (data || []).map(mapRow);
   },
 
-  findById(id: string): Account | undefined {
-    return store.accounts.find((a) => a.id === id);
+  async findById(id: string): Promise<Account | undefined> {
+    const { data, error } = await supabase.from("accounts").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? mapRow(data) : undefined;
   },
 
-  findByCode(code: string): Account | undefined {
-    return store.accounts.find((a) => a.code === code);
+  async findByCode(code: string): Promise<Account | undefined> {
+    const { data, error } = await supabase.from("accounts").select("*").eq("code", code).maybeSingle();
+    if (error) throw error;
+    return data ? mapRow(data) : undefined;
   },
 
-  /** Check if an account ID exists */
-  exists(id: string): boolean {
-    return store.accounts.some((a) => a.id === id);
+  async exists(id: string): Promise<boolean> {
+    const { count, error } = await supabase.from("accounts").select("id", { count: "exact", head: true }).eq("id", id);
+    if (error) throw error;
+    return (count || 0) > 0;
   },
 
-  findByType(type: Account["type"]): Account[] {
-    return store.accounts.filter((a) => a.type === type);
+  async findByType(type: Account["type"]): Promise<Account[]> {
+    const { data, error } = await supabase.from("accounts").select("*").eq("type", type);
+    if (error) throw error;
+    return (data || []).map(mapRow);
   },
 };
+
+function mapRow(row: any): Account {
+  return { id: row.id, code: row.code, name: row.name, type: row.type, description: row.description };
+}
