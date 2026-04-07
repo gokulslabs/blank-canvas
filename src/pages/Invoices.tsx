@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import { formatCurrency } from "@/lib/currency";
 import { AppLayout } from "@/components/AppLayout";
@@ -18,10 +18,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Invoice, LineItem } from "@/types/accounting";
-import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice } from "@/hooks/useInvoices";
+import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const PAGE_SIZE = 10;
 
 function InvoiceForm({
   initial,
@@ -95,22 +97,33 @@ function InvoiceForm({
   );
 }
 
-function InvoiceDetail({ invoice, currency, onEdit, onDelete }: {
+function InvoiceDetail({ invoice, currency, onEdit, onDelete, onMarkPaid, markingPaid }: {
   invoice: Invoice;
   currency: string;
   onEdit: () => void;
   onDelete: () => void;
+  onMarkPaid: () => void;
+  markingPaid: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start">
-        <div>
-          <div className="flex justify-between text-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Customer</span>
-            <span className="font-medium ml-4">{invoice.customerName}</span>
+            <span className="font-medium">{invoice.customerName}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Status</span>
+            <Badge variant={invoice.status === "paid" ? "default" : "secondary"}>{invoice.status}</Badge>
           </div>
         </div>
         <div className="flex gap-2">
+          {invoice.status !== "paid" && (
+            <Button variant="outline" size="sm" onClick={onMarkPaid} disabled={markingPaid} className="text-green-600 border-green-300 hover:bg-green-50">
+              <CheckCircle className="h-3 w-3 mr-1" /> {markingPaid ? "Processing..." : "Mark Paid"}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={onEdit}>
             <Pencil className="h-3 w-3 mr-1" /> Edit
           </Button>
@@ -175,6 +188,25 @@ function InvoiceDetail({ invoice, currency, onEdit, onDelete }: {
   );
 }
 
+function Pagination({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t">
+      <p className="text-sm text-muted-foreground">
+        Page {page} of {totalPages}
+      </p>
+      <div className="flex gap-1">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function Invoices() {
   const { currentOrg, currency } = useApp();
   const orgId = currentOrg?.id;
@@ -182,14 +214,21 @@ export default function Invoices() {
   const createMutation = useCreateInvoice(orgId);
   const updateMutation = useUpdateInvoice(orgId);
   const deleteMutation = useDeleteInvoice(orgId);
+  const markPaidMutation = useMarkInvoicePaid(orgId);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
+  const [page, setPage] = useState(1);
+
+  const sorted = useMemo(() => invoices.slice().reverse(), [invoices]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const paginated = useMemo(() => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sorted, page]);
 
   const handleCreate = async (data: { customerName: string; taxRate: number; lineItems: Omit<LineItem, "id" | "total">[] }) => {
     await createMutation.mutateAsync(data);
     setCreateOpen(false);
+    setPage(1);
   };
 
   const handleUpdate = async (data: { customerName: string; taxRate: number; lineItems: Omit<LineItem, "id" | "total">[] }) => {
@@ -220,13 +259,20 @@ export default function Invoices() {
     setDetailInvoice(null);
   };
 
+  const handleMarkPaid = async (invoice: Invoice) => {
+    await markPaidMutation.mutateAsync(invoice);
+    setDetailInvoice(null);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Invoices</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage your invoices</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage your invoices {sorted.length > 0 && `(${sorted.length} total)`}
+            </p>
           </div>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -250,30 +296,33 @@ export default function Invoices() {
                 <p>No invoices yet. Create your first invoice to get started.</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.slice().reverse().map((inv) => (
-                    <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
-                      <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                      <TableCell>{inv.customerName}</TableCell>
-                      <TableCell>
-                        <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(inv.total, currency)}</TableCell>
-                      <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Date</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginated.map((inv) => (
+                      <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
+                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                        <TableCell>{inv.customerName}</TableCell>
+                        <TableCell>
+                          <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(inv.total, currency)}</TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              </>
             )}
           </CardContent>
         </Card>
@@ -290,6 +339,8 @@ export default function Invoices() {
                 currency={currency}
                 onEdit={() => setEditInvoice(detailInvoice)}
                 onDelete={() => handleDelete(detailInvoice.id)}
+                onMarkPaid={() => handleMarkPaid(detailInvoice)}
+                markingPaid={markPaidMutation.isPending}
               />
             )}
           </DialogContent>

@@ -5,6 +5,14 @@ import { createJournalEntry, deleteJournalEntriesByReference } from "@/services/
 import { Invoice, LineItem } from "@/types/accounting";
 import { toast } from "sonner";
 
+function invalidateAll(qc: ReturnType<typeof useQueryClient>, orgId: string | undefined) {
+  qc.invalidateQueries({ queryKey: ["invoices", orgId] });
+  qc.invalidateQueries({ queryKey: ["dashboard", orgId] });
+  qc.invalidateQueries({ queryKey: ["pnl"] });
+  qc.invalidateQueries({ queryKey: ["balance-sheet", orgId] });
+  qc.invalidateQueries({ queryKey: ["revenue-over-time", orgId] });
+}
+
 export function useInvoices(orgId: string | undefined) {
   return useQuery({
     queryKey: ["invoices", orgId],
@@ -69,9 +77,7 @@ export function useCreateInvoice(orgId: string | undefined) {
       return invoice;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices", orgId] });
-      qc.invalidateQueries({ queryKey: ["dashboard", orgId] });
-      qc.invalidateQueries({ queryKey: ["pnl"] });
+      invalidateAll(qc, orgId);
       toast.success("Invoice created");
     },
     onError: (err) => {
@@ -84,7 +90,6 @@ export function useUpdateInvoice(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
-      // Delete old journal entries, update invoice, re-create journal entries
       await deleteJournalEntriesByReference(invoice.id);
       await invoiceRepo.update(invoice);
 
@@ -106,9 +111,7 @@ export function useUpdateInvoice(orgId: string | undefined) {
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices", orgId] });
-      qc.invalidateQueries({ queryKey: ["dashboard", orgId] });
-      qc.invalidateQueries({ queryKey: ["pnl"] });
+      invalidateAll(qc, orgId);
       toast.success("Invoice updated");
     },
     onError: (err) => {
@@ -125,13 +128,50 @@ export function useDeleteInvoice(orgId: string | undefined) {
       await invoiceRepo.delete(invoiceId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["invoices", orgId] });
-      qc.invalidateQueries({ queryKey: ["dashboard", orgId] });
-      qc.invalidateQueries({ queryKey: ["pnl"] });
+      invalidateAll(qc, orgId);
       toast.success("Invoice deleted");
     },
     onError: (err) => {
       toast.error("Failed to delete invoice: " + (err as Error).message);
+    },
+  });
+}
+
+/**
+ * Mark an invoice as paid.
+ * Creates a journal entry: Debit Cash (1000), Credit AR (1200)
+ */
+export function useMarkInvoicePaid(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (invoice: Invoice) => {
+      // Update status to paid
+      await invoiceRepo.update({ ...invoice, status: "paid" });
+
+      const [cashAccount, arAccount] = await Promise.all([
+        accountRepo.findByCode("1000"),
+        accountRepo.findByCode("1200"),
+      ]);
+
+      // Payment journal entry: Cash received, AR cleared
+      await createJournalEntry({
+        organizationId: invoice.organizationId,
+        date: new Date().toISOString(),
+        description: `Payment received — Invoice #${invoice.invoiceNumber}`,
+        referenceType: "invoice",
+        referenceId: invoice.id,
+        lines: [
+          { accountId: cashAccount!.id, debit: invoice.total, credit: 0 },
+          { accountId: arAccount!.id, debit: 0, credit: invoice.total },
+        ],
+      });
+    },
+    onSuccess: () => {
+      invalidateAll(qc, orgId);
+      toast.success("Invoice marked as paid — payment recorded");
+    },
+    onError: (err) => {
+      toast.error("Failed to mark as paid: " + (err as Error).message);
     },
   });
 }
