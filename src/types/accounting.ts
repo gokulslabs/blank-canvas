@@ -2,10 +2,18 @@
 
 import { CurrencyCode } from "@/lib/currency";
 
+export interface Profile {
+  id: string;
+  fullName: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
 export interface Organization {
   id: string;
   name: string;
   currency: CurrencyCode;
+  userId?: string;
   createdAt: string;
 }
 
@@ -23,6 +31,7 @@ export interface LineItem {
   quantity: number;
   price: number;
   total: number;
+  taxRate?: number; // GST rate per line item
 }
 
 export interface Invoice {
@@ -38,6 +47,15 @@ export interface Invoice {
   reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
+  // GST fields
+  customerGstin?: string;
+  placeOfSupply?: string;
+  isInterstate?: boolean;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  // Multi-currency
+  currency?: CurrencyCode;
 }
 
 export interface Expense {
@@ -50,6 +68,8 @@ export interface Expense {
   reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
+  // Multi-currency
+  currency?: CurrencyCode;
 }
 
 export interface JournalEntry {
@@ -129,4 +149,24 @@ export interface BankTransaction {
   referenceId?: string;
   referenceType?: "invoice" | "expense";
   createdAt: string;
+}
+
+/** GST Summary */
+export interface GSTSummary {
+  totalTaxableValue: number;
+  totalCGST: number;
+  totalSGST: number;
+  totalIGST: number;
+  totalTax: number;
+  invoices: {
+    invoiceNumber: string;
+    customerName: string;
+    customerGstin: string;
+    taxableValue: number;
+    cgst: number;
+    sgst: number;
+    igst: number;
+    total: number;
+    date: string;
+  }[];
 }
