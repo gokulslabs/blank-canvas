@@ -1,12 +1,15 @@
+import { useEffect, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/AppLayout";
+import { formatCurrency } from "@/lib/currency";
+import { DashboardData } from "@/types/accounting";
 import {
-  DollarSign,
   Wallet,
   TrendingUp,
   TrendingDown,
   FileText,
   Receipt,
+  IndianRupee,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -44,19 +47,27 @@ function StatCard({
   );
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
-}
-
 export default function Dashboard() {
-  const { getDashboardData, invoices, expenses, currentOrg } = useApp();
-  const data = getDashboardData();
+  const { getDashboardData, invoices, expenses, currentOrg, loading, currency } = useApp();
+  const [data, setData] = useState<DashboardData | null>(null);
+
+  useEffect(() => {
+    if (!currentOrg) return;
+    getDashboardData().then(setData).catch(console.error);
+  }, [currentOrg, getDashboardData, invoices, expenses]);
 
   const recentInvoices = invoices.slice(-5).reverse();
   const recentExpenses = expenses.slice(-5).reverse();
+
+  if (loading || !data) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64 text-muted-foreground">
+          Loading dashboard...
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -68,50 +79,38 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        {/* Ledger-derived stats — all figures come from journal lines */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Revenue"
-            value={formatCurrency(data.totalRevenue)}
+            value={formatCurrency(data.totalRevenue, currency)}
             icon={TrendingUp}
             trend="up"
           />
           <StatCard
             title="Total Expenses"
-            value={formatCurrency(data.totalExpenses)}
+            value={formatCurrency(data.totalExpenses, currency)}
             icon={TrendingDown}
             trend="down"
           />
           <StatCard
             title="Net Profit"
-            value={formatCurrency(data.profit)}
-            icon={DollarSign}
+            value={formatCurrency(data.profit, currency)}
+            icon={currency === "INR" ? IndianRupee : Wallet}
             trend={data.profit >= 0 ? "up" : "down"}
           />
           <StatCard
             title="Cash Balance"
-            value={formatCurrency(data.cashBalance)}
+            value={formatCurrency(data.cashBalance, currency)}
             icon={Wallet}
             trend={data.cashBalance >= 0 ? "up" : "down"}
           />
         </div>
 
-        {/* Counts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <StatCard
-            title="Invoices"
-            value={String(data.invoiceCount)}
-            icon={FileText}
-          />
-          <StatCard
-            title="Expenses"
-            value={String(data.expenseCount)}
-            icon={Receipt}
-          />
+          <StatCard title="Invoices" value={String(data.invoiceCount)} icon={FileText} />
+          <StatCard title="Expenses" value={String(data.expenseCount)} icon={Receipt} />
         </div>
 
-        {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -119,25 +118,16 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {recentInvoices.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No invoices yet. Create your first invoice.
-                </p>
+                <p className="text-sm text-muted-foreground">No invoices yet.</p>
               ) : (
                 <div className="space-y-3">
                   {recentInvoices.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="flex items-center justify-between text-sm"
-                    >
+                    <div key={inv.id} className="flex items-center justify-between text-sm">
                       <div>
                         <p className="font-medium">{inv.invoiceNumber}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {inv.customerName}
-                        </p>
+                        <p className="text-muted-foreground text-xs">{inv.customerName}</p>
                       </div>
-                      <span className="font-medium">
-                        {formatCurrency(inv.total)}
-                      </span>
+                      <span className="font-medium">{formatCurrency(inv.total, currency)}</span>
                     </div>
                   ))}
                 </div>
@@ -151,24 +141,17 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {recentExpenses.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No expenses yet. Record your first expense.
-                </p>
+                <p className="text-sm text-muted-foreground">No expenses yet.</p>
               ) : (
                 <div className="space-y-3">
                   {recentExpenses.map((exp) => (
-                    <div
-                      key={exp.id}
-                      className="flex items-center justify-between text-sm"
-                    >
+                    <div key={exp.id} className="flex items-center justify-between text-sm">
                       <div>
                         <p className="font-medium">{exp.vendorName}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {exp.category}
-                        </p>
+                        <p className="text-muted-foreground text-xs">{exp.category}</p>
                       </div>
                       <span className="font-medium text-destructive">
-                        -{formatCurrency(exp.amount)}
+                        -{formatCurrency(exp.amount, currency)}
                       </span>
                     </div>
                   ))}
