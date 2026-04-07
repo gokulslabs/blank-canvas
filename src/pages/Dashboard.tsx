@@ -10,8 +10,10 @@ import {
   FileText,
   Receipt,
   IndianRupee,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 function StatCard({
@@ -106,9 +108,26 @@ export default function Dashboard() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard title="Invoices" value={String(data.invoiceCount)} icon={FileText} />
           <StatCard title="Expenses" value={String(data.expenseCount)} icon={Receipt} />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Reconciliation
+              </CardTitle>
+              <ArrowLeftRight className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{data.reconciliationProgress}%</div>
+              <Progress value={data.reconciliationProgress} className="mt-2 h-2" />
+              {data.unreconciledCount > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {data.unreconciledCount} unreconciled
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
