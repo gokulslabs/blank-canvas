@@ -7,6 +7,8 @@ import { AppProvider } from "@/context/AppContext";
 import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
+import TrialBalance from "./pages/TrialBalance";
+import Reconciliation from "./pages/Reconciliation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/expenses" element={<Expenses />} />
+            <Route path="/reports/trial-balance" element={<TrialBalance />} />
+            <Route path="/reconciliation" element={<Reconciliation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

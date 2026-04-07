@@ -18,6 +18,7 @@ export const invoiceRepo = {
       tax_amount: invoice.taxAmount,
       total: invoice.total,
       status: invoice.status,
+      reconciliation_status: invoice.reconciliationStatus,
       created_at: invoice.createdAt,
     });
     if (error) throw error;
@@ -46,6 +47,14 @@ export const invoiceRepo = {
     if (error) throw error;
     return count || 0;
   },
+
+  async updateReconciliationStatus(id: string, status: "unreconciled" | "reconciled"): Promise<void> {
+    const { error } = await supabase
+      .from("invoices")
+      .update({ reconciliation_status: status })
+      .eq("id", id);
+    if (error) throw error;
+  },
 };
 
 function mapRow(row: any): Invoice {
@@ -60,6 +69,7 @@ function mapRow(row: any): Invoice {
     taxAmount: Number(row.tax_amount),
     total: Number(row.total),
     status: row.status,
+    reconciliationStatus: row.reconciliation_status || "unreconciled",
     createdAt: row.created_at,
   };
 }

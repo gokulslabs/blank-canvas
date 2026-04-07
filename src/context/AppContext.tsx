@@ -9,6 +9,7 @@ import {
 import { CurrencyCode } from "@/lib/currency";
 import { createJournalEntry } from "@/services/accountingService";
 import { getProfitAndLoss, getCashBalance } from "@/services/reportingService";
+import { getReconciliationStats } from "@/services/reconciliationService";
 import { accountRepo } from "@/repositories/accountRepo";
 import { invoiceRepo } from "@/repositories/invoiceRepo";
 import { expenseRepo } from "@/repositories/expenseRepo";
@@ -52,7 +53,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const currency: CurrencyCode = currentOrg?.currency || "INR";
 
-  /** Load organizations on mount */
   useEffect(() => {
     (async () => {
       try {
@@ -68,7 +68,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  /** Load invoices and expenses when org changes */
   const loadOrgData = useCallback(async (orgId: string) => {
     const [inv, exp] = await Promise.all([
       invoiceRepo.findByOrg(orgId),
@@ -135,13 +134,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         taxAmount,
         total,
         status: "draft",
+        reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
         organizationId: orgId,
       };
 
       await invoiceRepo.insert(invoice);
 
-      // Journal entry: DR Accounts Receivable, CR Revenue
       const [arAccount, revenueAccount] = await Promise.all([
         accountRepo.findByCode("1200"),
         accountRepo.findByCode("4000"),
@@ -178,13 +177,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const expense: Expense = {
         id: crypto.randomUUID(),
         ...data,
+        reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
         organizationId: orgId,
       };
 
       await expenseRepo.insert(expense);
 
-      // Journal entry: DR Expenses, CR Cash
       const [expenseAccount, cashAccount] = await Promise.all([
         accountRepo.findByCode("5000"),
         accountRepo.findByCode("1000"),
@@ -210,11 +209,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const getDashboardData = useCallback(async (): Promise<DashboardData> => {
     const orgId = currentOrg?.id || "";
-    const [pnl, cashBalance, invCount, expCount] = await Promise.all([
+    const [pnl, cashBalance, invCount, expCount, reconStats] = await Promise.all([
       getProfitAndLoss(orgId),
       getCashBalance(orgId),
       invoiceRepo.count(orgId),
       expenseRepo.count(orgId),
+      getReconciliationStats(orgId),
     ]);
 
     return {
@@ -224,6 +224,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       cashBalance,
       invoiceCount: invCount,
       expenseCount: expCount,
+      unreconciledCount: reconStats.unreconciledCount,
+      reconciliationProgress: reconStats.reconciliationProgress,
     };
   }, [currentOrg]);
 
