@@ -1,11 +1,9 @@
 /**
- * Invoice PDF Generator
- * Uses browser APIs to create a clean PDF from invoice data.
+ * Invoice PDF Generator with GST support
  */
 
 import { Invoice } from "@/types/accounting";
-import { formatCurrency } from "@/lib/currency";
-import { CurrencyCode } from "@/lib/currency";
+import { formatCurrency, CurrencyCode } from "@/lib/currency";
 
 export function generateInvoicePDF(invoice: Invoice, orgName: string, currency: CurrencyCode) {
   const printWindow = window.open("", "_blank");
@@ -23,6 +21,19 @@ export function generateInvoicePDF(invoice: Invoice, orgName: string, currency: 
     )
     .join("");
 
+  const taxRows = invoice.isInterstate
+    ? `<div class="total-row"><span>IGST (${invoice.taxRate}%)</span><span>${formatCurrency(invoice.igstAmount || 0, currency)}</span></div>`
+    : `<div class="total-row"><span>CGST (${invoice.taxRate / 2}%)</span><span>${formatCurrency(invoice.cgstAmount || 0, currency)}</span></div>
+       <div class="total-row"><span>SGST (${invoice.taxRate / 2}%)</span><span>${formatCurrency(invoice.sgstAmount || 0, currency)}</span></div>`;
+
+  const gstinRow = invoice.customerGstin
+    ? `<div class="section"><div class="section-label">GSTIN</div><div class="section-value" style="font-family:monospace">${invoice.customerGstin}</div></div>`
+    : '';
+
+  const posRow = invoice.placeOfSupply
+    ? `<div class="section"><div class="section-label">Place of Supply</div><div class="section-value">${invoice.placeOfSupply}${invoice.isInterstate ? ' (Inter-state)' : ' (Intra-state)'}</div></div>`
+    : '';
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -33,19 +44,19 @@ export function generateInvoicePDF(invoice: Invoice, orgName: string, currency: 
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color:#1a1a1a; padding:40px; max-width:800px; margin:0 auto; }
     .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:40px; }
-    .company { font-size:24px; font-weight:700; color:#1a1a1a; }
+    .company { font-size:24px; font-weight:700; }
     .invoice-meta { text-align:right; }
     .invoice-number { font-size:20px; font-weight:600; color:#6366f1; }
     .meta-row { font-size:13px; color:#6b7280; margin-top:4px; }
-    .section { margin-bottom:30px; }
-    .section-label { font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; }
+    .section { margin-bottom:12px; }
+    .section-label { font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px; }
     .section-value { font-size:15px; font-weight:500; }
-    table { width:100%; border-collapse:collapse; margin-bottom:24px; }
+    table { width:100%; border-collapse:collapse; margin:24px 0; }
     th { padding:10px 12px; text-align:left; font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #e5e7eb; }
     th:nth-child(2) { text-align:center; }
     th:nth-child(3), th:nth-child(4) { text-align:right; }
     .totals { display:flex; flex-direction:column; align-items:flex-end; }
-    .total-row { display:flex; justify-content:space-between; width:250px; padding:6px 0; font-size:14px; }
+    .total-row { display:flex; justify-content:space-between; width:280px; padding:6px 0; font-size:14px; }
     .total-row.grand { border-top:2px solid #1a1a1a; padding-top:10px; margin-top:4px; font-size:16px; font-weight:700; }
     .status { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; text-transform:uppercase; }
     .status-paid { background:#dcfce7; color:#166534; }
@@ -57,9 +68,7 @@ export function generateInvoicePDF(invoice: Invoice, orgName: string, currency: 
 </head>
 <body>
   <div class="header">
-    <div>
-      <div class="company">${orgName}</div>
-    </div>
+    <div><div class="company">${orgName}</div></div>
     <div class="invoice-meta">
       <div class="invoice-number">${invoice.invoiceNumber}</div>
       <div class="meta-row">Date: ${new Date(invoice.createdAt).toLocaleDateString()}</div>
@@ -71,43 +80,22 @@ export function generateInvoicePDF(invoice: Invoice, orgName: string, currency: 
     <div class="section-label">Bill To</div>
     <div class="section-value">${invoice.customerName}</div>
   </div>
+  ${gstinRow}
+  ${posRow}
 
   <table>
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Qty</th>
-        <th>Price</th>
-        <th>Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${lineItemRows}
-    </tbody>
+    <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+    <tbody>${lineItemRows}</tbody>
   </table>
 
   <div class="totals">
-    <div class="total-row">
-      <span>Subtotal</span>
-      <span>${formatCurrency(invoice.subtotal, currency)}</span>
-    </div>
-    <div class="total-row">
-      <span>Tax (${invoice.taxRate}%)</span>
-      <span>${formatCurrency(invoice.taxAmount, currency)}</span>
-    </div>
-    <div class="total-row grand">
-      <span>Total</span>
-      <span>${formatCurrency(invoice.total, currency)}</span>
-    </div>
+    <div class="total-row"><span>Subtotal</span><span>${formatCurrency(invoice.subtotal, currency)}</span></div>
+    ${taxRows}
+    <div class="total-row grand"><span>Total</span><span>${formatCurrency(invoice.total, currency)}</span></div>
   </div>
 
-  <div class="footer">
-    Generated by LedgerFlow &bull; ${new Date().toLocaleDateString()}
-  </div>
-
-  <script>
-    window.onload = function() { window.print(); };
-  </script>
+  <div class="footer">Generated by LedgerFlow &bull; ${new Date().toLocaleDateString()}</div>
+  <script>window.onload = function() { window.print(); };</script>
 </body>
 </html>`;
 
