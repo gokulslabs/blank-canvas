@@ -1,92 +1,52 @@
 /**
- * Reporting Service
+ * Reporting Service — Async, Supabase-backed
  * 
  * ALL financial reports are derived from journal lines.
- * We NEVER read from invoices/expenses tables for financial figures.
- * This ensures the ledger is the single source of truth.
- * 
- * Accounting fundamentals used here:
- * - Revenue accounts: normal credit balance (credits increase, debits decrease)
- * - Expense accounts: normal debit balance (debits increase, credits decrease)
- * - Asset accounts (Cash, AR): normal debit balance
+ * Ledger is the single source of truth.
  */
 
 import { ProfitAndLoss } from "@/types/accounting";
 import { journalRepo } from "@/repositories/journalRepo";
 import { accountRepo } from "@/repositories/accountRepo";
 
-/**
- * Profit & Loss Statement
- * 
- * Revenue = sum of credits - debits on revenue accounts
- * Expenses = sum of debits - credits on expense accounts
- * Profit = Revenue - Expenses
- */
-export function getProfitAndLoss(organizationId: string): ProfitAndLoss {
-  const lines = journalRepo.findLinesByOrg(organizationId);
+export async function getProfitAndLoss(organizationId: string): Promise<ProfitAndLoss> {
+  const [lines, revenueAccounts, expenseAccounts] = await Promise.all([
+    journalRepo.findLinesByOrg(organizationId),
+    accountRepo.findByType("revenue"),
+    accountRepo.findByType("expense"),
+  ]);
 
-  const revenueAccounts = new Set(
-    accountRepo.findByType("revenue").map((a) => a.id)
-  );
-  const expenseAccounts = new Set(
-    accountRepo.findByType("expense").map((a) => a.id)
-  );
+  const revenueIds = new Set(revenueAccounts.map((a) => a.id));
+  const expenseIds = new Set(expenseAccounts.map((a) => a.id));
 
   let revenue = 0;
   let expenses = 0;
 
   for (const line of lines) {
-    if (revenueAccounts.has(line.accountId)) {
-      // Revenue has a normal credit balance
+    if (revenueIds.has(line.accountId)) {
       revenue += line.credit - line.debit;
-    } else if (expenseAccounts.has(line.accountId)) {
-      // Expenses have a normal debit balance
+    } else if (expenseIds.has(line.accountId)) {
       expenses += line.debit - line.credit;
     }
   }
 
-  return {
-    revenue,
-    expenses,
-    profit: revenue - expenses,
-  };
+  return { revenue, expenses, profit: revenue - expenses };
 }
 
-/**
- * Cash Balance
- * 
- * Sum of all debits - credits on the Cash account.
- * Assets have a normal debit balance, so:
- *   debits increase cash, credits decrease cash.
- */
-export function getCashBalance(organizationId: string): number {
-  const cashAccount = accountRepo.findByCode("1000");
+export async function getCashBalance(organizationId: string): Promise<number> {
+  const cashAccount = await accountRepo.findByCode("1000");
   if (!cashAccount) return 0;
 
-  const lines = journalRepo.findLinesByAccount(organizationId, cashAccount.id);
-
-  return lines.reduce((balance, line) => {
-    return balance + line.debit - line.credit;
-  }, 0);
+  const lines = await journalRepo.findLinesByAccount(organizationId, cashAccount.id);
+  return lines.reduce((balance, line) => balance + line.debit - line.credit, 0);
 }
 
-/**
- * Get the balance of any account.
- * 
- * For asset/expense accounts: debit - credit (normal debit balance)
- * For liability/equity/revenue accounts: credit - debit (normal credit balance)
- */
-export function getAccountBalance(
-  organizationId: string,
-  accountId: string
-): number {
-  const account = accountRepo.findById(accountId);
+export async function getAccountBalance(organizationId: string, accountId: string): Promise<number> {
+  const account = await accountRepo.findById(accountId);
   if (!account) return 0;
 
-  const lines = journalRepo.findLinesByAccount(organizationId, accountId);
-
-  const isNormalDebit =
-    account.type === "asset" || account.type === "expense";
+  const lines = await journalRepo.findLinesByAccount(organizationId, accountId);
+  const isNormalDebit = account.type === "asset" || account.type === "expense";
 
   return lines.reduce((balance, line) => {
     return isNormalDebit

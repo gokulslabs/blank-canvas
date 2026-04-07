@@ -1,8 +1,11 @@
-// Core accounting types — structured for PostgreSQL migration
+// Core accounting types — structured for PostgreSQL
+
+import { CurrencyCode } from "@/lib/currency";
 
 export interface Organization {
   id: string;
   name: string;
+  currency: CurrencyCode;
   createdAt: string;
 }
 
@@ -47,10 +50,6 @@ export interface Expense {
   organizationId: string;
 }
 
-/**
- * A journal entry represents a single accounting transaction.
- * It contains multiple journal lines that must balance (total debits = total credits).
- */
 export interface JournalEntry {
   id: string;
   organizationId: string;
@@ -61,22 +60,14 @@ export interface JournalEntry {
   createdAt: string;
 }
 
-/**
- * Each journal line debits OR credits a specific account.
- * In double-entry accounting, every transaction has at least one debit and one credit line.
- */
 export interface JournalLine {
   id: string;
   journalEntryId: string;
   accountId: string;
-  debit: number;  // amount debited (0 if this is a credit line)
-  credit: number; // amount credited (0 if this is a debit line)
+  debit: number;
+  credit: number;
 }
 
-/**
- * Input for creating a journal entry.
- * The accounting service validates that debits === credits before persisting.
- */
 export interface CreateJournalEntryInput {
   organizationId: string;
   date: string;

@@ -1,24 +1,65 @@
 /**
- * Invoice Repository
+ * Invoice Repository — Supabase-backed
  */
 
 import { Invoice } from "@/types/accounting";
-import { store } from "./store";
+import { supabase } from "@/integrations/supabase/client";
 
 export const invoiceRepo = {
-  insert(invoice: Invoice): void {
-    store.invoices.push(invoice);
+  async insert(invoice: Invoice): Promise<void> {
+    const { error } = await supabase.from("invoices").insert({
+      id: invoice.id,
+      organization_id: invoice.organizationId,
+      invoice_number: invoice.invoiceNumber,
+      customer_name: invoice.customerName,
+      line_items: invoice.lineItems,
+      tax_rate: invoice.taxRate,
+      subtotal: invoice.subtotal,
+      tax_amount: invoice.taxAmount,
+      total: invoice.total,
+      status: invoice.status,
+      created_at: invoice.createdAt,
+    });
+    if (error) throw error;
   },
 
-  findByOrg(organizationId: string): Invoice[] {
-    return store.invoices.filter((i) => i.organizationId === organizationId);
+  async findByOrg(organizationId: string): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*")
+      .eq("organization_id", organizationId);
+    if (error) throw error;
+    return (data || []).map(mapRow);
   },
 
-  findById(id: string): Invoice | undefined {
-    return store.invoices.find((i) => i.id === id);
+  async findById(id: string): Promise<Invoice | undefined> {
+    const { data, error } = await supabase.from("invoices").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? mapRow(data) : undefined;
   },
 
-  count(organizationId: string): number {
-    return store.invoices.filter((i) => i.organizationId === organizationId).length;
+  async count(organizationId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId);
+    if (error) throw error;
+    return count || 0;
   },
 };
+
+function mapRow(row: any): Invoice {
+  return {
+    id: row.id,
+    organizationId: row.organization_id,
+    invoiceNumber: row.invoice_number,
+    customerName: row.customer_name,
+    lineItems: row.line_items || [],
+    taxRate: Number(row.tax_rate),
+    subtotal: Number(row.subtotal),
+    taxAmount: Number(row.tax_amount),
+    total: Number(row.total),
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
