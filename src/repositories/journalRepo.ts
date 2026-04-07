@@ -32,6 +32,16 @@ export const journalRepo = {
     if (error) throw error;
   },
 
+  async insertEntryWithLines(entry: JournalEntry, lines: JournalLine[]): Promise<void> {
+    await this.insertEntry(entry);
+    try {
+      await this.insertLines(lines);
+    } catch (err) {
+      await supabase.from("journal_entries").delete().eq("id", entry.id);
+      throw err;
+    }
+  },
+
   async findEntriesByOrg(organizationId: string): Promise<JournalEntry[]> {
     const { data, error } = await supabase
       .from("journal_entries")
