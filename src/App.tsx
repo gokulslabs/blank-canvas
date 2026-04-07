@@ -13,6 +13,7 @@ import ProfitLoss from "./pages/ProfitLoss";
 import BalanceSheet from "./pages/BalanceSheet";
 import GeneralLedger from "./pages/GeneralLedger";
 import ARAging from "./pages/ARAging";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/expenses" element={<Expenses />} />
+            <Route path="/accounts" element={<ChartOfAccounts />} />
             <Route path="/reports/trial-balance" element={<TrialBalance />} />
             <Route path="/reports/profit-loss" element={<ProfitLoss />} />
             <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
