@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { useApp } from "@/context/AppContext";
 import { formatCurrency } from "@/lib/currency";
 import { AppLayout } from "@/components/AppLayout";
@@ -80,7 +81,7 @@ export default function Reconciliation() {
     try {
       const matched = await autoMatchTransactions(currentOrg.id);
       await Promise.all([loadTransactions(), refreshData()]);
-      alert(`Auto-matched ${matched} transaction(s).`);
+      toast.success(`Auto-matched ${matched} transaction(s).`);
     } catch (err) {
       console.error("Auto-match failed:", err);
     } finally {

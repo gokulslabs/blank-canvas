@@ -87,3 +87,15 @@ export async function createJournalEntry(input: CreateJournalEntryInput): Promis
 
   return entry;
 }
+
+/**
+ * Delete all journal entries associated with a reference (invoice/expense).
+ * Used when deleting or updating an invoice/expense to reverse the accounting impact.
+ */
+export async function deleteJournalEntriesByReference(referenceId: string): Promise<void> {
+  const entries = await journalRepo.findEntriesByReference(referenceId);
+  for (const entry of entries) {
+    await journalRepo.deleteEntry(entry.id);
+  }
+  console.log(`[Ledger] Deleted ${entries.length} journal entries for reference: ${referenceId}`);
+}

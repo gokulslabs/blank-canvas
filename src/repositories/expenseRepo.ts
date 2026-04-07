@@ -52,6 +52,25 @@ export const expenseRepo = {
       .eq("id", id);
     if (error) throw error;
   },
+
+  async update(expense: Expense): Promise<void> {
+    const { error } = await supabase
+      .from("expenses")
+      .update({
+        vendor_name: expense.vendorName,
+        amount: expense.amount,
+        category: expense.category,
+        date: expense.date,
+        description: expense.description,
+      })
+      .eq("id", expense.id);
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) throw error;
+  },
 };
 
 function mapRow(row: any): Expense {
