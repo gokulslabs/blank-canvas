@@ -15,6 +15,7 @@ export const expenseRepo = {
       category: expense.category,
       date: expense.date,
       description: expense.description,
+      reconciliation_status: expense.reconciliationStatus,
       created_at: expense.createdAt,
     });
     if (error) throw error;
@@ -43,6 +44,14 @@ export const expenseRepo = {
     if (error) throw error;
     return count || 0;
   },
+
+  async updateReconciliationStatus(id: string, status: "unreconciled" | "reconciled"): Promise<void> {
+    const { error } = await supabase
+      .from("expenses")
+      .update({ reconciliation_status: status })
+      .eq("id", id);
+    if (error) throw error;
+  },
 };
 
 function mapRow(row: any): Expense {
@@ -54,6 +63,7 @@ function mapRow(row: any): Expense {
     category: row.category,
     date: row.date,
     description: row.description,
+    reconciliationStatus: row.reconciliation_status || "unreconciled",
     createdAt: row.created_at,
   };
 }
