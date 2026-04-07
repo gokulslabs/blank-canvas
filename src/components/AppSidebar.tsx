@@ -33,6 +33,7 @@ const navItems = [
   { label: "AR Aging", path: "/reports/ar-aging", icon: Clock },
   { label: "GST Report", path: "/reports/gst", icon: IndianRupee },
   { label: "Reconciliation", path: "/reconciliation", icon: ArrowLeftRight },
+  { label: "Team", path: "/team", icon: Building2 },
 ];
 
 export function AppSidebar() {
