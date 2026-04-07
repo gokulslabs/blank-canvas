@@ -14,6 +14,8 @@ export interface Organization {
   name: string;
   currency: CurrencyCode;
   ownerId?: string;
+  gstin?: string;
+  state?: string;
   createdAt: string;
 }
 
@@ -39,6 +41,7 @@ export interface LineItem {
   quantity: number;
   price: number;
   total: number;
+  hsnCode?: string;
   taxRate?: number;
 }
 
@@ -156,21 +159,43 @@ export interface BankTransaction {
   createdAt: string;
 }
 
+export interface GSTInvoiceRow {
+  invoiceNumber: string;
+  customerName: string;
+  customerGstin: string;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  total: number;
+  date: string;
+  placeOfSupply: string;
+  isInterstate: boolean;
+  classification: "B2B" | "B2C";
+  hsnCodes: string[];
+}
+
+export interface HSNSummaryRow {
+  hsnCode: string;
+  description: string;
+  quantity: number;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  totalTax: number;
+}
+
 export interface GSTSummary {
   totalTaxableValue: number;
   totalCGST: number;
   totalSGST: number;
   totalIGST: number;
   totalTax: number;
-  invoices: {
-    invoiceNumber: string;
-    customerName: string;
-    customerGstin: string;
-    taxableValue: number;
-    cgst: number;
-    sgst: number;
-    igst: number;
-    total: number;
-    date: string;
-  }[];
+  b2bCount: number;
+  b2cCount: number;
+  b2bValue: number;
+  b2cValue: number;
+  invoices: GSTInvoiceRow[];
+  hsnSummary: HSNSummaryRow[];
 }
