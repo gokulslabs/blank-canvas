@@ -7,15 +7,16 @@ import {
   DashboardData,
 } from "@/types/accounting";
 import { createJournalEntry } from "@/services/accountingService";
+import { getProfitAndLoss, getCashBalance } from "@/services/reportingService";
+import { accountRepo } from "@/repositories/accountRepo";
+import { invoiceRepo } from "@/repositories/invoiceRepo";
+import { expenseRepo } from "@/repositories/expenseRepo";
 
-interface AppState {
+interface AppContextType {
   organizations: Organization[];
   currentOrg: Organization | null;
   invoices: Invoice[];
   expenses: Expense[];
-}
-
-interface AppContextType extends AppState {
   createOrganization: (name: string) => void;
   switchOrganization: (id: string) => void;
   addInvoice: (data: {
@@ -35,7 +36,6 @@ interface AppContextType extends AppState {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-// Default organization
 const defaultOrg: Organization = {
   id: "org-1",
   name: "My Business",
@@ -45,8 +45,9 @@ const defaultOrg: Organization = {
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([defaultOrg]);
   const [currentOrg, setCurrentOrg] = useState<Organization>(defaultOrg);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  // Version counter to trigger re-renders when ledger data changes
+  const [, setVersion] = useState(0);
+  const bump = () => setVersion((v) => v + 1);
 
   const createOrganization = useCallback((name: string) => {
     const org: Organization = {
@@ -66,15 +67,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [organizations]
   );
 
-  let invoiceCounter = invoices.length;
-
   const addInvoice = useCallback(
     (data: {
       customerName: string;
       lineItems: Omit<LineItem, "id" | "total">[];
       taxRate: number;
     }) => {
-      invoiceCounter++;
+      const orgId = currentOrg?.id || "";
+      const count = invoiceRepo.count(orgId) + 1;
+
       const lineItems: LineItem[] = data.lineItems.map((item) => ({
         ...item,
         id: crypto.randomUUID(),
@@ -87,7 +88,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const invoice: Invoice = {
         id: crypto.randomUUID(),
-        invoiceNumber: `INV-${String(invoiceCounter).padStart(4, "0")}`,
+        invoiceNumber: `INV-${String(count).padStart(4, "0")}`,
         customerName: data.customerName,
         lineItems,
         taxRate: data.taxRate,
@@ -96,13 +97,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         total,
         status: "draft",
         createdAt: new Date().toISOString(),
-        organizationId: currentOrg?.id || "",
+        organizationId: orgId,
       };
 
-      // Create journal entry (double-entry accounting)
-      createJournalEntry("invoice", invoice);
+      // Persist invoice
+      invoiceRepo.insert(invoice);
 
-      setInvoices((prev) => [...prev, invoice]);
+      // Create journal entry: DR Accounts Receivable, CR Revenue
+      const arAccount = accountRepo.findByCode("1200")!;
+      const revenueAccount = accountRepo.findByCode("4000")!;
+
+      createJournalEntry({
+        organizationId: orgId,
+        date: new Date().toISOString(),
+        description: `Invoice #${invoice.invoiceNumber} — ${invoice.customerName}`,
+        referenceType: "invoice",
+        referenceId: invoice.id,
+        lines: [
+          { accountId: arAccount.id, debit: total, credit: 0 },
+          { accountId: revenueAccount.id, debit: 0, credit: total },
+        ],
+      });
+
+      bump();
       return invoice;
     },
     [currentOrg]
@@ -116,49 +133,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       date: string;
       description?: string;
     }) => {
+      const orgId = currentOrg?.id || "";
+
       const expense: Expense = {
         id: crypto.randomUUID(),
         ...data,
         createdAt: new Date().toISOString(),
-        organizationId: currentOrg?.id || "",
+        organizationId: orgId,
       };
 
-      // Create journal entry (double-entry accounting)
-      createJournalEntry("expense", expense);
+      // Persist expense
+      expenseRepo.insert(expense);
 
-      setExpenses((prev) => [...prev, expense]);
+      // Create journal entry: DR Expenses, CR Cash
+      const expenseAccount = accountRepo.findByCode("5000")!;
+      const cashAccount = accountRepo.findByCode("1000")!;
+
+      createJournalEntry({
+        organizationId: orgId,
+        date: data.date,
+        description: `Expense — ${data.vendorName}: ${data.category}`,
+        referenceType: "expense",
+        referenceId: expense.id,
+        lines: [
+          { accountId: expenseAccount.id, debit: data.amount, credit: 0 },
+          { accountId: cashAccount.id, debit: 0, credit: data.amount },
+        ],
+      });
+
+      bump();
       return expense;
     },
     [currentOrg]
   );
 
+  /**
+   * Dashboard data is DERIVED from the ledger, not from invoice/expense tables.
+   * Revenue & expenses come from journal lines via the reporting service.
+   * Invoice/expense counts are supplementary metadata only.
+   */
   const getDashboardData = useCallback((): DashboardData => {
-    const orgInvoices = invoices.filter(
-      (i) => i.organizationId === currentOrg?.id
-    );
-    const orgExpenses = expenses.filter(
-      (e) => e.organizationId === currentOrg?.id
-    );
-
-    const totalRevenue = orgInvoices.reduce((sum, inv) => sum + inv.total, 0);
-    const totalExpenses = orgExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const orgId = currentOrg?.id || "";
+    const pnl = getProfitAndLoss(orgId);
+    const cashBalance = getCashBalance(orgId);
 
     return {
-      totalRevenue,
-      totalExpenses,
-      profit: totalRevenue - totalExpenses,
-      invoiceCount: orgInvoices.length,
-      expenseCount: orgExpenses.length,
+      totalRevenue: pnl.revenue,
+      totalExpenses: pnl.expenses,
+      profit: pnl.profit,
+      cashBalance,
+      invoiceCount: invoiceRepo.count(orgId),
+      expenseCount: expenseRepo.count(orgId),
     };
-  }, [invoices, expenses, currentOrg]);
+  }, [currentOrg]);
+
+  // Read current org's invoices/expenses from repos for UI listing
+  const orgInvoices = invoiceRepo.findByOrg(currentOrg?.id || "");
+  const orgExpenses = expenseRepo.findByOrg(currentOrg?.id || "");
 
   return (
     <AppContext.Provider
       value={{
         organizations,
         currentOrg,
-        invoices,
-        expenses,
+        invoices: orgInvoices,
+        expenses: orgExpenses,
         createOrganization,
         switchOrganization,
         addInvoice,

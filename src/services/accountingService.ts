@@ -1,71 +1,111 @@
 /**
- * Central Accounting Service
+ * Accounting Service — The Heart of the Ledger
  * 
- * Handles journal entry creation following double-entry accounting principles.
- * Currently a placeholder — will be connected to a real ledger later.
+ * Implements double-entry accounting with strict validation.
+ * Every financial action flows through createJournalEntry().
+ * 
+ * Rules enforced:
+ * 1. total_debit === total_credit (balanced entry)
+ * 2. All referenced accounts must exist
+ * 3. All amounts must be > 0
+ * 4. At least one debit and one credit line required
  */
 
-import { JournalEntry, Invoice, Expense } from "@/types/accounting";
-import { ACCOUNTS } from "@/modules/accounts/chartOfAccounts";
+import { CreateJournalEntryInput, JournalEntry, JournalLine } from "@/types/accounting";
+import { journalRepo } from "@/repositories/journalRepo";
+import { accountRepo } from "@/repositories/accountRepo";
 
-// In-memory journal entries store
-const journalEntries: JournalEntry[] = [];
+export class AccountingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AccountingError";
+  }
+}
 
 /**
- * Creates a journal entry for a financial transaction.
- * 
- * Double-entry accounting:
- * - Invoice: Debit Accounts Receivable, Credit Revenue
- * - Expense: Debit Expense account, Credit Cash/Bank
+ * Validates and persists a journal entry with its lines.
+ * This is the ONLY way financial data enters the ledger.
  */
-export function createJournalEntry(
-  type: "invoice" | "expense",
-  data: Invoice | Expense
-): JournalEntry {
+export function createJournalEntry(input: CreateJournalEntryInput): JournalEntry {
+  // --- Validation ---
+
+  // 1. Must have lines
+  if (!input.lines || input.lines.length < 2) {
+    throw new AccountingError("Journal entry must have at least 2 lines (debit + credit)");
+  }
+
+  // 2. Validate each line
+  for (const line of input.lines) {
+    // Account must exist
+    if (!accountRepo.exists(line.accountId)) {
+      throw new AccountingError(`Account ${line.accountId} does not exist`);
+    }
+
+    // Amounts must be non-negative
+    if (line.debit < 0 || line.credit < 0) {
+      throw new AccountingError("Debit and credit amounts must be non-negative");
+    }
+
+    // Each line should have either a debit or credit, not both
+    if (line.debit > 0 && line.credit > 0) {
+      throw new AccountingError("A journal line cannot have both debit and credit");
+    }
+
+    // Each line must have at least one non-zero amount
+    if (line.debit === 0 && line.credit === 0) {
+      throw new AccountingError("A journal line must have a non-zero debit or credit");
+    }
+  }
+
+  // 3. Entry must have at least one debit and one credit
+  const hasDebit = input.lines.some((l) => l.debit > 0);
+  const hasCredit = input.lines.some((l) => l.credit > 0);
+  if (!hasDebit || !hasCredit) {
+    throw new AccountingError("Journal entry must have at least one debit and one credit line");
+  }
+
+  // 4. CRITICAL: Total debits must equal total credits
+  const totalDebit = input.lines.reduce((sum, l) => sum + l.debit, 0);
+  const totalCredit = input.lines.reduce((sum, l) => sum + l.credit, 0);
+
+  // Use epsilon comparison for floating point
+  if (Math.abs(totalDebit - totalCredit) > 0.001) {
+    throw new AccountingError(
+      `Unbalanced entry: debits (${totalDebit.toFixed(2)}) ≠ credits (${totalCredit.toFixed(2)})`
+    );
+  }
+
+  // --- Persist ---
+
   const entry: JournalEntry = {
     id: crypto.randomUUID(),
-    type,
-    date: new Date().toISOString(),
-    description: "",
-    debits: [],
-    credits: [],
-    referenceId: data.id,
+    organizationId: input.organizationId,
+    date: input.date,
+    description: input.description,
+    referenceType: input.referenceType,
+    referenceId: input.referenceId,
     createdAt: new Date().toISOString(),
   };
 
-  if (type === "invoice") {
-    const invoice = data as Invoice;
-    entry.description = `Invoice #${invoice.invoiceNumber} - ${invoice.customerName}`;
-    // Debit: Accounts Receivable (asset increases)
-    entry.debits.push({
-      accountId: ACCOUNTS.find((a) => a.code === "1200")!.id,
-      amount: invoice.total,
-    });
-    // Credit: Revenue (revenue increases)
-    entry.credits.push({
-      accountId: ACCOUNTS.find((a) => a.code === "4000")!.id,
-      amount: invoice.total,
-    });
-  } else {
-    const expense = data as Expense;
-    entry.description = `Expense - ${expense.vendorName}: ${expense.category}`;
-    // Debit: Expenses (expense increases)
-    entry.debits.push({
-      accountId: ACCOUNTS.find((a) => a.code === "5000")!.id,
-      amount: expense.amount,
-    });
-    // Credit: Cash (asset decreases)
-    entry.credits.push({
-      accountId: ACCOUNTS.find((a) => a.code === "1000")!.id,
-      amount: expense.amount,
-    });
-  }
+  const lines: JournalLine[] = input.lines.map((l) => ({
+    id: crypto.randomUUID(),
+    journalEntryId: entry.id,
+    accountId: l.accountId,
+    debit: l.debit,
+    credit: l.credit,
+  }));
 
-  journalEntries.push(entry);
-  console.log(`[Accounting] Journal entry created:`, entry);
+  journalRepo.insertEntry(entry);
+  journalRepo.insertLines(lines);
+
+  console.log(`[Ledger] Journal entry created: ${entry.description}`, {
+    id: entry.id,
+    lines: lines.map((l) => ({
+      account: l.accountId,
+      debit: l.debit,
+      credit: l.credit,
+    })),
+  });
+
   return entry;
-}
-
-export function getJournalEntries(): JournalEntry[] {
-  return [...journalEntries];
 }
