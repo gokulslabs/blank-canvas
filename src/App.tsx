@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppProvider } from "@/context/AppContext";
+import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
@@ -33,7 +34,7 @@ function ProtectedRoutes() {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <AppProvider>
@@ -59,8 +60,15 @@ function ProtectedRoutes() {
 function AuthRoute() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/app" replace />;
   return <Auth />;
+}
+
+function PublicRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/app" replace />;
+  return <Landing />;
 }
 
 const App = () => (
@@ -71,8 +79,19 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<AuthRoute />} />
-            <Route path="/*" element={<ProtectedRoutes />} />
+            <Route path="/" element={<PublicRoute />} />
+            <Route path="/login" element={<AuthRoute />} />
+            <Route path="/signup" element={<AuthRoute />} />
+            <Route path="/app/*" element={<ProtectedRoutes />} />
+            {/* Legacy redirects */}
+            <Route path="/auth" element={<Navigate to="/login" replace />} />
+            <Route path="/invoices" element={<Navigate to="/app/invoices" replace />} />
+            <Route path="/expenses" element={<Navigate to="/app/expenses" replace />} />
+            <Route path="/reconciliation" element={<Navigate to="/app/reconciliation" replace />} />
+            <Route path="/team" element={<Navigate to="/app/team" replace />} />
+            <Route path="/accounts" element={<Navigate to="/app/accounts" replace />} />
+            <Route path="/reports/*" element={<Navigate to="/app/reports" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

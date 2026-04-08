@@ -1,11 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, FileText, Receipt, Building2, ChevronDown, Scale,
-  ArrowLeftRight, BarChart3, BookOpen, Layers, Clock, List, LogOut,
-  IndianRupee,
+  LayoutDashboard, FileText, Receipt, Building2, ChevronDown,
+  ArrowLeftRight, BarChart3, BookOpen, Layers, Clock, List,
+  IndianRupee, Scale, Zap, X, Users,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useAuth } from "@/context/AuthContext";
 import { ALL_CURRENCIES, CurrencyCode } from "@/lib/currency";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -21,25 +20,60 @@ import { cn } from "@/lib/utils";
 import { organizationRepo } from "@/repositories/organizationRepo";
 import { toast } from "sonner";
 
-const navItems = [
-  { label: "Dashboard", path: "/", icon: LayoutDashboard },
-  { label: "Invoices", path: "/invoices", icon: FileText },
-  { label: "Expenses", path: "/expenses", icon: Receipt },
-  { label: "Accounts", path: "/accounts", icon: List },
-  { label: "Profit & Loss", path: "/reports/profit-loss", icon: BarChart3 },
-  { label: "Balance Sheet", path: "/reports/balance-sheet", icon: BookOpen },
-  { label: "General Ledger", path: "/reports/general-ledger", icon: Layers },
-  { label: "Trial Balance", path: "/reports/trial-balance", icon: Scale },
-  { label: "AR Aging", path: "/reports/ar-aging", icon: Clock },
-  { label: "GST Report", path: "/reports/gst", icon: IndianRupee },
-  { label: "Reconciliation", path: "/reconciliation", icon: ArrowLeftRight },
-  { label: "Team", path: "/team", icon: Building2 },
+const mainNav = [
+  { label: "Dashboard", path: "/app", icon: LayoutDashboard },
+  { label: "Invoices", path: "/app/invoices", icon: FileText },
+  { label: "Expenses", path: "/app/expenses", icon: Receipt },
+  { label: "Accounts", path: "/app/accounts", icon: List },
 ];
 
-export function AppSidebar() {
+const reportNav = [
+  { label: "Profit & Loss", path: "/app/reports/profit-loss", icon: BarChart3 },
+  { label: "Balance Sheet", path: "/app/reports/balance-sheet", icon: BookOpen },
+  { label: "General Ledger", path: "/app/reports/general-ledger", icon: Layers },
+  { label: "Trial Balance", path: "/app/reports/trial-balance", icon: Scale },
+  { label: "AR Aging", path: "/app/reports/ar-aging", icon: Clock },
+  { label: "GST Report", path: "/app/reports/gst", icon: IndianRupee },
+];
+
+const otherNav = [
+  { label: "Reconciliation", path: "/app/reconciliation", icon: ArrowLeftRight },
+  { label: "Team", path: "/app/team", icon: Users },
+];
+
+function NavSection({ items, label }: { items: typeof mainNav; label?: string }) {
   const location = useLocation();
+  return (
+    <div>
+      {label && (
+        <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">{label}</p>
+      )}
+      <div className="space-y-0.5">
+        {items.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
+                isActive
+                  ? "bg-accent text-primary"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function AppSidebar({ onClose }: { onClose?: () => void }) {
   const { currentOrg, organizations, switchOrganization, createOrganization } = useApp();
-  const { signOut, user } = useAuth();
   const [newOrgName, setNewOrgName] = useState("");
   const [showNewOrg, setShowNewOrg] = useState(false);
   const [newOrgCurrency, setNewOrgCurrency] = useState<CurrencyCode>("INR");
@@ -63,22 +97,32 @@ export function AppSidebar() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch {
-      toast.error("Failed to sign out");
-    }
-  };
-
   return (
-    <aside className="w-60 border-r border-border bg-card flex flex-col h-screen shrink-0">
-      <div className="p-4 border-b border-border">
+    <aside className="w-64 border-r border-border bg-background flex flex-col h-screen">
+      {/* Brand */}
+      <div className="h-14 flex items-center justify-between px-4 border-b border-border shrink-0">
+        <Link to="/app" className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+            <Zap className="h-3.5 w-3.5 text-primary-foreground" />
+          </div>
+          <span className="font-bold text-sm tracking-tight">Yoho-Books</span>
+        </Link>
+        {onClose && (
+          <button onClick={onClose} className="lg:hidden p-1 rounded-md hover:bg-accent">
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Org switcher */}
+      <div className="px-3 py-3 border-b border-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-accent transition-colors text-sm font-medium">
-              <Building2 className="h-4 w-4 text-primary" />
-              <span className="flex-1 text-left truncate">{currentOrg?.name || "Loading..."}</span>
+            <button className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg hover:bg-accent transition-colors text-sm">
+              <div className="h-6 w-6 rounded bg-accent flex items-center justify-center text-[10px] font-bold text-primary">
+                {currentOrg?.name?.[0]?.toUpperCase() || "?"}
+              </div>
+              <span className="flex-1 text-left truncate text-xs font-medium">{currentOrg?.name || "Loading..."}</span>
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
@@ -134,37 +178,16 @@ export function AppSidebar() {
         </DropdownMenu>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-primary"
-                  : "text-sidebar-foreground hover:bg-accent"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+      {/* Navigation */}
+      <nav className="flex-1 p-3 space-y-5 overflow-auto">
+        <NavSection items={mainNav} />
+        <NavSection items={reportNav} label="Reports" />
+        <NavSection items={otherNav} label="Settings" />
       </nav>
 
-      <div className="p-4 border-t border-border space-y-2">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{user?.email}</p>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleSignOut} title="Sign out">
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">LedgerFlow v3.0</p>
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-border">
+        <p className="text-[10px] text-muted-foreground">Yoho-Books v3.0</p>
       </div>
     </aside>
   );
