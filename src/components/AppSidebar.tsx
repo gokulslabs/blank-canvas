@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Receipt, Building2, ChevronDown,
   ArrowLeftRight, BarChart3, BookOpen, Layers, Clock, List,
-  IndianRupee, Scale, Zap, X, Users,
+  IndianRupee, Scale, Zap, X, Users, CreditCard,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ALL_CURRENCIES, CurrencyCode } from "@/lib/currency";
@@ -23,6 +23,7 @@ import { toast } from "sonner";
 const mainNav = [
   { label: "Dashboard", path: "/app", icon: LayoutDashboard },
   { label: "Invoices", path: "/app/invoices", icon: FileText },
+  { label: "Payments", path: "/app/payments", icon: CreditCard },
   { label: "Expenses", path: "/app/expenses", icon: Receipt },
   { label: "Accounts", path: "/app/accounts", icon: List },
 ];

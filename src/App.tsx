@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
+import Payments from "./pages/Payments";
 import TrialBalance from "./pages/TrialBalance";
 import Reconciliation from "./pages/Reconciliation";
 import ProfitLoss from "./pages/ProfitLoss";
@@ -42,6 +43,7 @@ function ProtectedRoutes() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/invoices" element={<Invoices />} />
         <Route path="/expenses" element={<Expenses />} />
+        <Route path="/payments" element={<Payments />} />
         <Route path="/accounts" element={<ChartOfAccounts />} />
         <Route path="/reports/trial-balance" element={<TrialBalance />} />
         <Route path="/reports/profit-loss" element={<ProfitLoss />} />
