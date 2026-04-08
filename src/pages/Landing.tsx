@@ -57,12 +57,26 @@ const tiers = [
 ];
 
 export default function Landing() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    if (location.pathname === "/") {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      e.preventDefault();
+      navigate("/");
+      window.scrollTo({ top: 0 });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Zap className="h-4 w-4 text-primary-foreground" />
             </div>
@@ -210,12 +224,12 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <Link to="/" onClick={handleLogoClick} className="flex items-center gap-2">
             <div className="h-6 w-6 rounded bg-primary flex items-center justify-center">
               <Zap className="h-3 w-3 text-primary-foreground" />
             </div>
             <span className="font-semibold text-sm">Yoho-Books</span>
-          </div>
+          </Link>
           <nav className="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
