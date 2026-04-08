@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, BarChart3, ArrowLeftRight, IndianRupee,
   CheckCircle2, ArrowRight, Zap, Shield, Globe,
+  CreditCard, Receipt,
 } from "lucide-react";
 
 const features = [
@@ -25,6 +26,24 @@ const features = [
     icon: BarChart3,
     title: "Financial Reports",
     desc: "Profit & Loss, Balance Sheet, Trial Balance, General Ledger — all real-time.",
+  },
+];
+
+const steps = [
+  {
+    icon: FileText,
+    title: "Create Invoices",
+    desc: "Generate GST-compliant invoices in seconds with automatic tax calculations.",
+  },
+  {
+    icon: CreditCard,
+    title: "Track Payments",
+    desc: "Record payments, match with bank transactions, and keep your books balanced.",
+  },
+  {
+    icon: Receipt,
+    title: "Stay GST Compliant",
+    desc: "Export-ready GST reports, HSN summaries, and B2B/B2C breakdowns for filing.",
   },
 ];
 
@@ -84,9 +103,13 @@ export default function Landing() {
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
           </nav>
           <div className="flex items-center gap-3">
+            <Link to="/demo">
+              <Button variant="ghost" size="sm">Try Demo</Button>
+            </Link>
             <Link to="/login">
               <Button variant="ghost" size="sm">Log in</Button>
             </Link>
@@ -118,7 +141,7 @@ export default function Landing() {
             </Link>
             <Link to="/demo">
               <Button variant="outline" size="lg" className="h-12 px-8 text-base">
-                Try Demo
+                Try Demo — No Signup
               </Button>
             </Link>
           </div>
@@ -136,7 +159,7 @@ export default function Landing() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((f) => (
-              <div key={f.title} className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-shadow">
+              <div key={f.title} className="bg-card rounded-xl border border-border p-6 hover:shadow-md transition-all hover:-translate-y-0.5">
                 <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center mb-4">
                   <f.icon className="h-5 w-5 text-primary" />
                 </div>
@@ -148,8 +171,44 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <section id="how-it-works" className="py-24">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-sm font-medium text-primary mb-2">Simple workflow</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              How it works
+            </h2>
+            <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
+              Get started in minutes. No accounting degree required.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {steps.map((step, idx) => (
+              <div key={step.title} className="relative text-center">
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                  <step.icon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="absolute -top-2 -right-2 md:right-auto md:-left-2 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                  {idx + 1}
+                </div>
+                <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center mt-12">
+            <Link to="/demo">
+              <Button size="lg" variant="outline" className="h-12 px-8">
+                See it in action <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Social Proof */}
-      <section className="py-16 border-y border-border">
+      <section className="py-16 border-y border-border bg-muted/20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
             <div>
@@ -187,7 +246,7 @@ export default function Landing() {
             {tiers.map((tier) => (
               <div
                 key={tier.name}
-                className={`rounded-xl border p-8 ${
+                className={`rounded-xl border p-8 transition-shadow hover:shadow-lg ${
                   tier.highlighted
                     ? "border-primary shadow-lg ring-1 ring-primary/20"
                     : "border-border"
@@ -221,6 +280,30 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Final CTA */}
+      <section className="py-24 bg-muted/30">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Ready to simplify your accounting?
+          </h2>
+          <p className="text-muted-foreground mt-4 text-lg">
+            Join thousands of Indian businesses managing their finances with Yoho-Books.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/signup">
+              <Button size="lg" className="h-12 px-8 text-base">
+                Start Free <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/demo">
+              <Button variant="outline" size="lg" className="h-12 px-8 text-base">
+                Try Demo
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -232,6 +315,7 @@ export default function Landing() {
           </Link>
           <nav className="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">How it Works</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
             <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
           </nav>
