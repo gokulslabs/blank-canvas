@@ -69,23 +69,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const memberships = await organizationMemberRepo.findByUser(user.id);
         
         if (memberships.length === 0) {
-          // New user: create default org + membership
-          const orgId = crypto.randomUUID();
-          const org: Organization = {
-            id: orgId,
-            name: "My Business",
-            currency: "INR",
-            ownerId: user.id,
-            createdAt: new Date().toISOString(),
-          };
-          await organizationRepo.insert(org);
-          await organizationMemberRepo.insert({
-            userId: user.id,
-            organizationId: orgId,
-            role: "owner",
-          });
-          setOrganizations([org]);
-          setCurrentOrg(org);
+          // New user: redirect to onboarding (no auto-create)
+          setLoading(false);
+          return;
         } else {
           // Load orgs by IDs from memberships
           const orgIds = memberships.map((m) => m.organizationId);

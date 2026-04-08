@@ -101,6 +101,10 @@ export function useUpdateInvoice(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
+      // Prevent editing paid invoices
+      if (invoice.status === "paid") {
+        throw new Error("Cannot edit a paid invoice. It is locked for integrity.");
+      }
       await deleteJournalEntriesByReference(invoice.id);
       await invoiceRepo.update(invoice);
 
@@ -135,6 +139,11 @@ export function useDeleteInvoice(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoiceId: string) => {
+      // Check if invoice is paid — prevent deletion
+      const invoice = await invoiceRepo.findById(invoiceId);
+      if (invoice?.status === "paid") {
+        throw new Error("Cannot delete a paid invoice. It is locked for integrity.");
+      }
       await deleteJournalEntriesByReference(invoiceId);
       await invoiceRepo.delete(invoiceId);
     },

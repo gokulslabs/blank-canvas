@@ -36,6 +36,8 @@ export const organizationRepo = {
       name: org.name,
       currency: org.currency,
       owner_id: org.ownerId,
+      gstin: org.gstin || "",
+      state: org.state || "",
       created_at: org.createdAt,
     });
     if (error) throw error;
@@ -56,6 +58,8 @@ function mapRow(row: any): Organization {
     name: row.name,
     currency: (row.currency || "INR") as CurrencyCode,
     ownerId: row.owner_id,
+    gstin: row.gstin || undefined,
+    state: row.state || undefined,
     createdAt: row.created_at,
   };
 }
