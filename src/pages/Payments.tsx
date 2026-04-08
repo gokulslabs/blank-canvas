@@ -204,7 +204,8 @@ export default function Payments() {
                 <p className="text-xs text-muted-foreground/60 mt-1">Record a payment against an invoice to get started</p>
               </div>
             ) : (
-            {/* Desktop table */}
+              <>
+              {/* Desktop table */}
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
@@ -265,6 +266,7 @@ export default function Payments() {
                   );
                 })}
               </div>
+              </>
             )}
           </CardContent>
         </Card>
