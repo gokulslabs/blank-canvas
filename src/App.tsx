@@ -86,7 +86,7 @@ const App = () => (
             <Route path="/signup" element={<AuthRoute />} />
             <Route path="/app/*" element={<ProtectedRoutes />} />
             {/* Legacy redirects */}
-            <Route path="/auth" element={<Navigate to="/login" replace />} />
+            <Route path="/auth" element={<AuthRoute />} />
             <Route path="/invoices" element={<Navigate to="/app/invoices" replace />} />
             <Route path="/expenses" element={<Navigate to="/app/expenses" replace />} />
             <Route path="/reconciliation" element={<Navigate to="/app/reconciliation" replace />} />
