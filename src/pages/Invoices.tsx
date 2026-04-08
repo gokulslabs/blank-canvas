@@ -121,7 +121,7 @@ function InvoiceForm({
       </div>
 
       {/* GST Fields */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label>Customer GSTIN</Label>
           <Input
@@ -171,8 +171,8 @@ function InvoiceForm({
       <div className="space-y-3">
         <Label>Line Items</Label>
         {lineItems.map((item, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="flex gap-2 items-end">
+          <div key={idx} className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
               <div className="flex-1">
                 <Input placeholder="Item name" value={item.name} onChange={(e) => updateLineItem(idx, "name", e.target.value)} />
               </div>
@@ -244,7 +244,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Customer</span>
@@ -271,7 +271,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => generateInvoicePDF(invoice, orgName, currency as any)}>
             <Download className="h-3 w-3 mr-1" /> PDF
           </Button>
