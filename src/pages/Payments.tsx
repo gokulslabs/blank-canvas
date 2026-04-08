@@ -204,46 +204,69 @@ export default function Payments() {
                 <p className="text-xs text-muted-foreground/60 mt-1">Record a payment against an invoice to get started</p>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((p) => {
-                    const inv = invoiceMap.get(p.invoiceId);
-                    const meta = METHOD_META[p.method] || METHOD_META.bank;
-                    const Icon = meta.icon;
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell className="text-sm">
-                          {format(new Date(p.date), "dd MMM yyyy")}
-                        </TableCell>
-                        <TableCell className="font-medium text-sm">
-                          {inv?.invoiceNumber || "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {inv?.customerName || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                            {meta.label}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-sm text-emerald-600">
-                          +{formatCurrency(p.amount, currency)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <>
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((p) => {
+                      const inv = invoiceMap.get(p.invoiceId);
+                      const meta = METHOD_META[p.method] || METHOD_META.bank;
+                      const Icon = meta.icon;
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-sm">{format(new Date(p.date), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="font-medium text-sm">{inv?.invoiceNumber || "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{inv?.customerName || "—"}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                              {meta.label}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-sm text-emerald-600">
+                            +{formatCurrency(p.amount, currency)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-border">
+                {payments.map((p) => {
+                  const inv = invoiceMap.get(p.invoiceId);
+                  const meta = METHOD_META[p.method] || METHOD_META.bank;
+                  const Icon = meta.icon;
+                  return (
+                    <div key={p.id} className="p-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-sm">{inv?.invoiceNumber || "—"}</span>
+                        <span className="font-semibold text-sm text-emerald-600">+{formatCurrency(p.amount, currency)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{inv?.customerName || "—"}</span>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Icon className="h-3 w-3" />
+                          {meta.label}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{format(new Date(p.date), "dd MMM yyyy")}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              </>
             )}
           </CardContent>
         </Card>

@@ -1,5 +1,6 @@
 import { useApp } from "@/context/AppContext";
 import { AppLayout } from "@/components/AppLayout";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { formatCurrency } from "@/lib/currency";
 import {
   TrendingUp, TrendingDown, FileText, Receipt, ArrowRight,
@@ -84,6 +85,7 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-8">
+        <PWAInstallBanner />
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Financial overview for {currentOrg?.name}</p>

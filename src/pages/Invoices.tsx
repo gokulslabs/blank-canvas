@@ -121,7 +121,7 @@ function InvoiceForm({
       </div>
 
       {/* GST Fields */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label>Customer GSTIN</Label>
           <Input
@@ -171,8 +171,8 @@ function InvoiceForm({
       <div className="space-y-3">
         <Label>Line Items</Label>
         {lineItems.map((item, idx) => (
-          <div key={idx} className="space-y-1">
-            <div className="flex gap-2 items-end">
+          <div key={idx} className="space-y-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
               <div className="flex-1">
                 <Input placeholder="Item name" value={item.name} onChange={(e) => updateLineItem(idx, "name", e.target.value)} />
               </div>
@@ -244,7 +244,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Customer</span>
@@ -271,7 +271,7 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
             </div>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => generateInvoicePDF(invoice, orgName, currency as any)}>
             <Download className="h-3 w-3 mr-1" /> PDF
           </Button>
@@ -496,36 +496,62 @@ export default function Invoices() {
               </div>
             ) : (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginated.map((inv) => (
-                      <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
-                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                        <TableCell>{inv.customerName}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {classifyB2BorB2C(inv.customerGstin)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((inv) => (
+                        <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
+                          <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                          <TableCell>{inv.customerName}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {classifyB2BorB2C(inv.customerGstin)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
+                          <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-border">
+                  {paginated.map((inv) => (
+                    <button
+                      key={inv.id}
+                      onClick={() => setDetailInvoice(inv)}
+                      className="w-full text-left p-4 hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-sm">{inv.invoiceNumber}</span>
+                        <Badge variant={inv.status === "paid" ? "default" : "secondary"} className="text-[10px]">{inv.status}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{inv.customerName}</span>
+                        <span className="font-semibold text-sm">{formatCurrency(inv.total, inv.currency || currency)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="text-[10px]">{classifyB2BorB2C(inv.customerGstin)}</Badge>
+                      </div>
+                    </button>
+                  ))}
+                </div>
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
               </>
             )}

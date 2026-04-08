@@ -177,58 +177,105 @@ export default function Expenses() {
               </div>
             ) : (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginated.map((exp) => (
-                      <TableRow key={exp.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{exp.vendorName}</p>
-                            {exp.description && <p className="text-xs text-muted-foreground">{exp.description}</p>}
-                          </div>
-                        </TableCell>
-                        <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(exp.date).toLocaleDateString()}</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(exp.amount, currency)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setEditExpense(exp)}>
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <Trash2 className="h-3 w-3 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This will permanently delete this expense and reverse its journal entries.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMutation.mutate(exp.id)}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="w-24"></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((exp) => (
+                        <TableRow key={exp.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{exp.vendorName}</p>
+                              {exp.description && <p className="text-xs text-muted-foreground">{exp.description}</p>}
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
+                          <TableCell className="text-muted-foreground">{new Date(exp.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(exp.amount, currency)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setEditExpense(exp)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete this expense and reverse its journal entries.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteMutation.mutate(exp.id)}>Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-border">
+                  {paginated.map((exp) => (
+                    <div key={exp.id} className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{exp.vendorName}</p>
+                          {exp.description && <p className="text-xs text-muted-foreground">{exp.description}</p>}
+                        </div>
+                        <span className="font-semibold text-sm">{formatCurrency(exp.amount, currency)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[10px]">{exp.category}</Badge>
+                          <span className="text-xs text-muted-foreground">{new Date(exp.date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditExpense(exp)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete this expense and reverse its journal entries.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteMutation.mutate(exp.id)}>Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
               </>
             )}
