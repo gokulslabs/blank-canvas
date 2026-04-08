@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { AppProvider } from "@/context/AppContext";
+import { AppProvider, useApp } from "@/context/AppContext";
+import { DemoProvider } from "@/context/DemoContext";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -20,9 +21,31 @@ import ARAging from "./pages/ARAging";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import GSTReport from "./pages/GSTReport";
 import TeamMembers from "./pages/TeamMembers";
+import Onboarding from "./pages/Onboarding";
+import Demo from "./pages/Demo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { currentOrg, loading } = useApp();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // If no org and not already on onboarding, redirect
+  if (!currentOrg && location.pathname !== "/app/onboarding") {
+    return <Navigate to="/app/onboarding" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function ProtectedRoutes() {
   const { user, loading } = useAuth();
@@ -39,22 +62,25 @@ function ProtectedRoutes() {
 
   return (
     <AppProvider>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/expenses" element={<Expenses />} />
-        <Route path="/payments" element={<Payments />} />
-        <Route path="/accounts" element={<ChartOfAccounts />} />
-        <Route path="/reports/trial-balance" element={<TrialBalance />} />
-        <Route path="/reports/profit-loss" element={<ProfitLoss />} />
-        <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
-        <Route path="/reports/general-ledger" element={<GeneralLedger />} />
-        <Route path="/reports/ar-aging" element={<ARAging />} />
-        <Route path="/reports/gst" element={<GSTReport />} />
-        <Route path="/reconciliation" element={<Reconciliation />} />
-        <Route path="/team" element={<TeamMembers />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <OnboardingGate>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/payments" element={<Payments />} />
+          <Route path="/accounts" element={<ChartOfAccounts />} />
+          <Route path="/reports/trial-balance" element={<TrialBalance />} />
+          <Route path="/reports/profit-loss" element={<ProfitLoss />} />
+          <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
+          <Route path="/reports/general-ledger" element={<GeneralLedger />} />
+          <Route path="/reports/ar-aging" element={<ARAging />} />
+          <Route path="/reports/gst" element={<GSTReport />} />
+          <Route path="/reconciliation" element={<Reconciliation />} />
+          <Route path="/team" element={<TeamMembers />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </OnboardingGate>
     </AppProvider>
   );
 }
@@ -84,6 +110,7 @@ const App = () => (
             <Route path="/" element={<PublicRoute />} />
             <Route path="/login" element={<AuthRoute />} />
             <Route path="/signup" element={<AuthRoute />} />
+            <Route path="/demo" element={<DemoProvider><Demo /></DemoProvider>} />
             <Route path="/app/*" element={<ProtectedRoutes />} />
             {/* Legacy redirects */}
             <Route path="/auth" element={<AuthRoute />} />

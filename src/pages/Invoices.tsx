@@ -276,32 +276,39 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
             <Download className="h-3 w-3 mr-1" /> PDF
           </Button>
           {invoice.status !== "paid" && (
-            <Button variant="outline" size="sm" onClick={onMarkPaid} disabled={markingPaid} className="text-green-600 border-green-300 hover:bg-green-50">
-              <CheckCircle className="h-3 w-3 mr-1" /> {markingPaid ? "Processing..." : "Mark Paid"}
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            <Pencil className="h-3 w-3 mr-1" /> Edit
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="h-3 w-3 mr-1" /> Delete
+            <>
+              <Button variant="outline" size="sm" onClick={onMarkPaid} disabled={markingPaid} className="text-green-600 border-green-300 hover:bg-green-50">
+                <CheckCircle className="h-3 w-3 mr-1" /> {markingPaid ? "Processing..." : "Mark Paid"}
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete {invoice.invoiceNumber} and reverse its journal entries.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+              <Button variant="outline" size="sm" onClick={onEdit}>
+                <Pencil className="h-3 w-3 mr-1" /> Edit
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-3 w-3 mr-1" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Invoice?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete {invoice.invoiceNumber} and reverse its journal entries.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+          {invoice.status === "paid" && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+              <AlertCircle className="h-3 w-3" /> Locked — paid invoice
+            </span>
+          )}
         </div>
       </div>
       <div className="border rounded-md overflow-hidden">

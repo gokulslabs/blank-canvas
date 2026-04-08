@@ -116,9 +116,9 @@ export default function Landing() {
                 Start Free <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link to="/login">
+            <Link to="/demo">
               <Button variant="outline" size="lg" className="h-12 px-8 text-base">
-                View Demo
+                Try Demo
               </Button>
             </Link>
           </div>
