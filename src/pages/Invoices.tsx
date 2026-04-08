@@ -496,36 +496,62 @@ export default function Invoices() {
               </div>
             ) : (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice #</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginated.map((inv) => (
-                      <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
-                        <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                        <TableCell>{inv.customerName}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {classifyB2BorB2C(inv.customerGstin)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
-                        <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginated.map((inv) => (
+                        <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
+                          <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                          <TableCell>{inv.customerName}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {classifyB2BorB2C(inv.customerGstin)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
+                          <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-border">
+                  {paginated.map((inv) => (
+                    <button
+                      key={inv.id}
+                      onClick={() => setDetailInvoice(inv)}
+                      className="w-full text-left p-4 hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-sm">{inv.invoiceNumber}</span>
+                        <Badge variant={inv.status === "paid" ? "default" : "secondary"} className="text-[10px]">{inv.status}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">{inv.customerName}</span>
+                        <span className="font-semibold text-sm">{formatCurrency(inv.total, inv.currency || currency)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</span>
+                        <Badge variant="outline" className="text-[10px]">{classifyB2BorB2C(inv.customerGstin)}</Badge>
+                      </div>
+                    </button>
+                  ))}
+                </div>
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
               </>
             )}
