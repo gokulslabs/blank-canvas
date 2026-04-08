@@ -87,7 +87,7 @@ export interface JournalEntry {
   organizationId: string;
   date: string;
   description: string;
-  referenceType: "invoice" | "expense" | "manual";
+  referenceType: "invoice" | "expense" | "manual" | "payment";
   referenceId: string;
   createdAt: string;
 }
