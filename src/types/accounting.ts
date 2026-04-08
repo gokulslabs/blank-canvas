@@ -87,7 +87,7 @@ export interface JournalEntry {
   organizationId: string;
   date: string;
   description: string;
-  referenceType: "invoice" | "expense" | "manual";
+  referenceType: "invoice" | "expense" | "manual" | "payment";
   referenceId: string;
   createdAt: string;
 }
@@ -100,11 +100,22 @@ export interface JournalLine {
   credit: number;
 }
 
+export interface Payment {
+  id: string;
+  organizationId: string;
+  invoiceId: string;
+  amount: number;
+  method: "cash" | "bank" | "upi";
+  date: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface CreateJournalEntryInput {
   organizationId: string;
   date: string;
   description: string;
-  referenceType: "invoice" | "expense" | "manual";
+  referenceType: "invoice" | "expense" | "manual" | "payment";
   referenceId: string;
   lines: {
     accountId: string;
