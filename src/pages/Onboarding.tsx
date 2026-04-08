@@ -22,15 +22,24 @@ export default function Onboarding() {
   const [state, setState] = useState("");
   const [gstin, setGstin] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ businessName?: string; state?: string; gstin?: string }>({});
+
+  const validate = () => {
+    const errs: typeof errors = {};
+    if (!businessName.trim()) errs.businessName = "Business name is required";
+    if (!state) errs.state = "Please select your state";
+    if (gstin && !isValidGSTIN(gstin)) errs.gstin = "Invalid GSTIN format (e.g. 27AAPFU0939F1ZV)";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !businessName.trim() || !state) return;
-
-    if (gstin && !isValidGSTIN(gstin)) {
-      toast.error("Invalid GSTIN format");
+    if (!user) {
+      toast.error("You must be logged in");
       return;
     }
+    if (!validate()) return;
 
     setSubmitting(true);
     try {
@@ -44,17 +53,28 @@ export default function Onboarding() {
         state,
         createdAt: new Date().toISOString(),
       };
+
+      console.log("[Onboarding] Creating organization:", orgId);
       await organizationRepo.insert(org);
+      console.log("[Onboarding] Organization created successfully");
+
+      console.log("[Onboarding] Adding membership for user:", user.id);
       await organizationMemberRepo.insert({
         userId: user.id,
         organizationId: orgId,
         role: "owner",
       });
-      toast.success("Organization created!");
-      navigate("/app", { replace: true });
+      console.log("[Onboarding] Membership created successfully");
+
+      toast.success("Organization created! Redirecting...");
+      // Small delay to let toast show, then hard navigate to reload AppContext
+      setTimeout(() => {
+        window.location.href = "/app";
+      }, 500);
     } catch (err) {
-      toast.error("Failed to create organization: " + (err as Error).message);
-    } finally {
+      console.error("[Onboarding] Error:", err);
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error("Failed to create organization: " + message);
       setSubmitting(false);
     }
   };
@@ -78,17 +98,27 @@ export default function Onboarding() {
               <Input
                 id="businessName"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => {
+                  setBusinessName(e.target.value);
+                  if (errors.businessName) setErrors((p) => ({ ...p, businessName: undefined }));
+                }}
                 placeholder="e.g. Acme Solutions Pvt Ltd"
                 required
                 maxLength={100}
+                className={errors.businessName ? "border-destructive" : ""}
               />
+              {errors.businessName && (
+                <p className="text-xs text-destructive">{errors.businessName}</p>
+              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="state">State *</Label>
-              <Select value={state} onValueChange={setState} required>
-                <SelectTrigger id="state">
+              <Select value={state} onValueChange={(v) => {
+                setState(v);
+                if (errors.state) setErrors((p) => ({ ...p, state: undefined }));
+              }} required>
+                <SelectTrigger id="state" className={errors.state ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select your state" />
                 </SelectTrigger>
                 <SelectContent>
@@ -97,6 +127,9 @@ export default function Onboarding() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.state && (
+                <p className="text-xs text-destructive">{errors.state}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -104,17 +137,36 @@ export default function Onboarding() {
               <Input
                 id="gstin"
                 value={gstin}
-                onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setGstin(e.target.value.toUpperCase());
+                  if (errors.gstin) setErrors((p) => ({ ...p, gstin: undefined }));
+                }}
                 placeholder="e.g. 27AAPFU0939F1ZV"
                 maxLength={15}
+                className={errors.gstin ? "border-destructive" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                Leave blank if you're a freelancer or not GST-registered
-              </p>
+              {errors.gstin ? (
+                <p className="text-xs text-destructive">{errors.gstin}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Leave blank if you're a freelancer or not GST-registered
+                </p>
+              )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={submitting || !businessName.trim() || !state}>
-              {submitting ? "Creating..." : "Get Started"}
+            <Button
+              type="submit"
+              className="w-full h-11"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full" />
+                  Creating...
+                </span>
+              ) : (
+                "Get Started"
+              )}
             </Button>
           </form>
         </CardContent>
