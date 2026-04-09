@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download, AlertCircle } from "lucide-react";
+import { downloadCSV } from "@/lib/csvExport";
 import { Invoice, LineItem } from "@/types/accounting";
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -363,6 +364,17 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           <span>Total</span>
           <span>{formatCurrency(invoice.total, currency as any)}</span>
         </div>
+        {/* Payment summary */}
+        <div className="flex justify-between pt-1">
+          <span className="text-muted-foreground">Amount Paid</span>
+          <span className="text-emerald-600 font-medium">{formatCurrency(invoice.amountPaid || 0, currency as any)}</span>
+        </div>
+        <div className="flex justify-between font-bold">
+          <span>Amount Due</span>
+          <span className={invoice.amountDue > 0 ? "text-destructive" : ""}>
+            {formatCurrency(invoice.amountDue ?? invoice.total, currency as any)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -473,15 +485,27 @@ export default function Invoices() {
               Manage your invoices {sorted.length > 0 && `(${sorted.length} total)`}
             </p>
           </div>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> New Invoice</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
-              <InvoiceForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Create Invoice" />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            {sorted.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                downloadCSV("invoices.csv",
+                  ["Invoice #", "Customer", "Status", "Total", "Paid", "Due", "Date"],
+                  sorted.map((inv) => [inv.invoiceNumber, inv.customerName, inv.status, inv.total, inv.amountPaid || 0, inv.amountDue ?? inv.total, new Date(inv.createdAt).toLocaleDateString()])
+                );
+              }}>
+                <Download className="h-4 w-4 mr-2" /> Export
+              </Button>
+            )}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" /> New Invoice</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
+                <InvoiceForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Create Invoice" />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Card>
