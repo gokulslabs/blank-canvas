@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useApp } from "@/context/AppContext";
 import { formatCurrency } from "@/lib/currency";
 import { AppLayout } from "@/components/AppLayout";
