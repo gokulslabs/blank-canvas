@@ -54,6 +54,8 @@ export function useCreateInvoice(orgId: string | undefined) {
         subtotal,
         taxAmount: gst.totalTax,
         total,
+        amountPaid: 0,
+        amountDue: total,
         status: "draft",
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
