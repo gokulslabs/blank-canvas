@@ -529,27 +529,37 @@ export default function Invoices() {
                         <TableHead>Customer</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Due</TableHead>
                         <TableHead>Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginated.map((inv) => (
-                        <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
-                          <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                          <TableCell>{inv.customerName}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {classifyB2BorB2C(inv.customerGstin)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
-                          <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
+                      {paginated.map((inv) => {
+                        const isOverdue = inv.status === "sent" && new Date(inv.createdAt) < new Date(Date.now() - 30 * 86400000);
+                        return (
+                          <TableRow key={inv.id} className={cn("cursor-pointer", isOverdue && "bg-destructive/5")} onClick={() => setDetailInvoice(inv)}>
+                            <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                            <TableCell>{inv.customerName}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {classifyB2BorB2C(inv.customerGstin)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={inv.status === "paid" ? "default" : inv.status === "partially_paid" ? "outline" : "secondary"}>
+                                {inv.status === "partially_paid" ? "Partial" : inv.status}
+                              </Badge>
+                              {isOverdue && <Badge variant="destructive" className="ml-1 text-[10px]">Overdue</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
+                            <TableCell className={cn("text-right font-medium", (inv.amountDue ?? inv.total) > 0 && inv.status !== "draft" && "text-destructive")}>
+                              {formatCurrency(inv.amountDue ?? inv.total, inv.currency || currency)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
