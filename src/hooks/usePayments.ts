@@ -29,22 +29,26 @@ export function useCreatePayment(orgId: string | undefined) {
     mutationFn: async (data: {
       invoiceId: string;
       amount: number;
-      method: "cash" | "bank" | "upi";
+      method: "cash" | "bank" | "upi" | "card";
       date: string;
       notes?: string;
     }) => {
       const id = orgId || "";
 
-      // Check for duplicate: if invoice already has a payment, block
-      const existing = await paymentRepo.findByInvoice(data.invoiceId);
-      if (existing.length > 0) {
-        throw new Error("This invoice already has a payment recorded");
-      }
-
-      // Check invoice exists and isn't already paid
+      // Check invoice exists
       const invoice = await invoiceRepo.findById(data.invoiceId);
       if (!invoice) throw new Error("Invoice not found");
-      if (invoice.status === "paid") throw new Error("Invoice is already marked as paid");
+      if (invoice.status === "paid") throw new Error("Invoice is already fully paid");
+
+      // Calculate how much has been paid already
+      const existingPayments = await paymentRepo.findByInvoice(data.invoiceId);
+      const totalPaid = existingPayments.reduce((s, p) => s + p.amount, 0);
+      const amountDue = invoice.total - totalPaid;
+
+      // Prevent overpayment
+      if (data.amount > amountDue + 0.01) {
+        throw new Error(`Payment exceeds amount due. Maximum: ${amountDue.toFixed(2)}`);
+      }
 
       const payment: Payment = {
         id: crypto.randomUUID(),
@@ -59,10 +63,19 @@ export function useCreatePayment(orgId: string | undefined) {
 
       await paymentRepo.insert(payment);
 
-      // Update invoice status to paid
-      await invoiceRepo.update({ ...invoice, status: "paid" });
+      // Update invoice paid amounts and status
+      const newTotalPaid = totalPaid + data.amount;
+      const newAmountDue = invoice.total - newTotalPaid;
+      const newStatus = newAmountDue <= 0.01 ? "paid" : "partially_paid";
 
-      // Create journal entry: DR Cash/Bank, CR Accounts Receivable
+      await invoiceRepo.update({
+        ...invoice,
+        amountPaid: newTotalPaid,
+        amountDue: Math.max(0, newAmountDue),
+        status: newStatus,
+      });
+
+      // Journal entry: DR Cash/Bank, CR Accounts Receivable
       const [cashAccount, arAccount] = await Promise.all([
         accountRepo.findByCode("1000"),
         accountRepo.findByCode("1200"),

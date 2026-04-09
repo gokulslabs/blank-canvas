@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useApp } from "@/context/AppContext";
 import { formatCurrency } from "@/lib/currency";
 import { AppLayout } from "@/components/AppLayout";
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Pencil, CheckCircle, ChevronLeft, ChevronRight, Download, AlertCircle } from "lucide-react";
+import { downloadCSV } from "@/lib/csvExport";
 import { Invoice, LineItem } from "@/types/accounting";
 import { useInvoices, useCreateInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from "@/hooks/useInvoices";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -363,6 +365,17 @@ function InvoiceDetail({ invoice, currency, orgName, onEdit, onDelete, onMarkPai
           <span>Total</span>
           <span>{formatCurrency(invoice.total, currency as any)}</span>
         </div>
+        {/* Payment summary */}
+        <div className="flex justify-between pt-1">
+          <span className="text-muted-foreground">Amount Paid</span>
+          <span className="text-emerald-600 font-medium">{formatCurrency(invoice.amountPaid || 0, currency as any)}</span>
+        </div>
+        <div className="flex justify-between font-bold">
+          <span>Amount Due</span>
+          <span className={invoice.amountDue > 0 ? "text-destructive" : ""}>
+            {formatCurrency(invoice.amountDue ?? invoice.total, currency as any)}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -473,15 +486,27 @@ export default function Invoices() {
               Manage your invoices {sorted.length > 0 && `(${sorted.length} total)`}
             </p>
           </div>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> New Invoice</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
-              <InvoiceForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Create Invoice" />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            {sorted.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                downloadCSV("invoices.csv",
+                  ["Invoice #", "Customer", "Status", "Total", "Paid", "Due", "Date"],
+                  sorted.map((inv) => [inv.invoiceNumber, inv.customerName, inv.status, inv.total, inv.amountPaid || 0, inv.amountDue ?? inv.total, new Date(inv.createdAt).toLocaleDateString()])
+                );
+              }}>
+                <Download className="h-4 w-4 mr-2" /> Export
+              </Button>
+            )}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" /> New Invoice</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
+                <InvoiceForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Create Invoice" />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Card>
@@ -505,27 +530,37 @@ export default function Invoices() {
                         <TableHead>Customer</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Due</TableHead>
                         <TableHead>Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginated.map((inv) => (
-                        <TableRow key={inv.id} className="cursor-pointer" onClick={() => setDetailInvoice(inv)}>
-                          <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                          <TableCell>{inv.customerName}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {classifyB2BorB2C(inv.customerGstin)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={inv.status === "paid" ? "default" : "secondary"}>{inv.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
-                          <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
-                        </TableRow>
-                      ))}
+                      {paginated.map((inv) => {
+                        const isOverdue = inv.status === "sent" && new Date(inv.createdAt) < new Date(Date.now() - 30 * 86400000);
+                        return (
+                          <TableRow key={inv.id} className={cn("cursor-pointer", isOverdue && "bg-destructive/5")} onClick={() => setDetailInvoice(inv)}>
+                            <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                            <TableCell>{inv.customerName}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {classifyB2BorB2C(inv.customerGstin)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={inv.status === "paid" ? "default" : inv.status === "partially_paid" ? "outline" : "secondary"}>
+                                {inv.status === "partially_paid" ? "Partial" : inv.status}
+                              </Badge>
+                              {isOverdue && <Badge variant="destructive" className="ml-1 text-[10px]">Overdue</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(inv.total, inv.currency || currency)}</TableCell>
+                            <TableCell className={cn("text-right font-medium", (inv.amountDue ?? inv.total) > 0 && inv.status !== "draft" && "text-destructive")}>
+                              {formatCurrency(inv.amountDue ?? inv.total, inv.currency || currency)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

@@ -54,6 +54,8 @@ export function useCreateInvoice(orgId: string | undefined) {
         subtotal,
         taxAmount: gst.totalTax,
         total,
+        amountPaid: 0,
+        amountDue: total,
         status: "draft",
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),
@@ -161,12 +163,14 @@ export function useMarkInvoicePaid(orgId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (invoice: Invoice) => {
-      await invoiceRepo.update({ ...invoice, status: "paid" });
+      await invoiceRepo.update({ ...invoice, status: "paid", amountPaid: invoice.total, amountDue: 0 });
 
       const [cashAccount, arAccount] = await Promise.all([
         accountRepo.findByCode("1000"),
         accountRepo.findByCode("1200"),
       ]);
+
+      const remainingDue = invoice.amountDue ?? invoice.total;
 
       await createJournalEntry({
         organizationId: invoice.organizationId,
@@ -175,8 +179,8 @@ export function useMarkInvoicePaid(orgId: string | undefined) {
         referenceType: "invoice",
         referenceId: invoice.id,
         lines: [
-          { accountId: cashAccount!.id, debit: invoice.total, credit: 0 },
-          { accountId: arAccount!.id, debit: 0, credit: invoice.total },
+          { accountId: cashAccount!.id, debit: remainingDue, credit: 0 },
+          { accountId: arAccount!.id, debit: 0, credit: remainingDue },
         ],
       });
     },

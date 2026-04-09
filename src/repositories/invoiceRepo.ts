@@ -18,6 +18,8 @@ export const invoiceRepo = {
       subtotal: invoice.subtotal,
       tax_amount: invoice.taxAmount,
       total: invoice.total,
+      amount_paid: invoice.amountPaid || 0,
+      amount_due: invoice.amountDue ?? invoice.total,
       status: invoice.status,
       reconciliation_status: invoice.reconciliationStatus,
       created_at: invoice.createdAt,
@@ -74,6 +76,8 @@ export const invoiceRepo = {
         subtotal: invoice.subtotal,
         tax_amount: invoice.taxAmount,
         total: invoice.total,
+        amount_paid: invoice.amountPaid || 0,
+        amount_due: invoice.amountDue ?? invoice.total,
         status: invoice.status,
         customer_gstin: invoice.customerGstin || '',
         place_of_supply: invoice.placeOfSupply || '',
@@ -94,6 +98,8 @@ export const invoiceRepo = {
 };
 
 function mapRow(row: any): Invoice {
+  const total = Number(row.total);
+  const amountPaid = Number(row.amount_paid || 0);
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -103,7 +109,9 @@ function mapRow(row: any): Invoice {
     taxRate: Number(row.tax_rate),
     subtotal: Number(row.subtotal),
     taxAmount: Number(row.tax_amount),
-    total: Number(row.total),
+    total,
+    amountPaid,
+    amountDue: row.amount_due != null ? Number(row.amount_due) : total - amountPaid,
     status: row.status,
     reconciliationStatus: row.reconciliation_status || "unreconciled",
     createdAt: row.created_at,

@@ -7,7 +7,7 @@ const DEMO_INVOICES: Invoice[] = [
   {
     id: "demo-inv-1", invoiceNumber: "INV-0001", customerName: "TechCorp India",
     lineItems: [{ id: "li-1", name: "Web Development", quantity: 1, price: 75000, total: 75000, hsnCode: "998314", taxRate: 18 }],
-    taxRate: 18, subtotal: 75000, taxAmount: 13500, total: 88500,
+    taxRate: 18, subtotal: 75000, taxAmount: 13500, total: 88500, amountPaid: 88500, amountDue: 0,
     status: "paid", reconciliationStatus: "reconciled", createdAt: "2026-03-15T10:00:00Z",
     organizationId: "demo-org", customerGstin: "27AABCT1234D1ZV", placeOfSupply: "Maharashtra",
     isInterstate: false, cgstAmount: 6750, sgstAmount: 6750, igstAmount: 0, currency: "INR",
@@ -15,7 +15,7 @@ const DEMO_INVOICES: Invoice[] = [
   {
     id: "demo-inv-2", invoiceNumber: "INV-0002", customerName: "StartupXYZ",
     lineItems: [{ id: "li-2", name: "UI/UX Design", quantity: 1, price: 45000, total: 45000, hsnCode: "998314", taxRate: 18 }],
-    taxRate: 18, subtotal: 45000, taxAmount: 8100, total: 53100,
+    taxRate: 18, subtotal: 45000, taxAmount: 8100, total: 53100, amountPaid: 0, amountDue: 53100,
     status: "sent", reconciliationStatus: "unreconciled", createdAt: "2026-03-28T10:00:00Z",
     organizationId: "demo-org", placeOfSupply: "Karnataka", isInterstate: true,
     cgstAmount: 0, sgstAmount: 0, igstAmount: 8100, currency: "INR",
@@ -23,7 +23,7 @@ const DEMO_INVOICES: Invoice[] = [
   {
     id: "demo-inv-3", invoiceNumber: "INV-0003", customerName: "RetailMart",
     lineItems: [{ id: "li-3", name: "Consulting", quantity: 10, price: 5000, total: 50000 }],
-    taxRate: 18, subtotal: 50000, taxAmount: 9000, total: 59000,
+    taxRate: 18, subtotal: 50000, taxAmount: 9000, total: 59000, amountPaid: 0, amountDue: 59000,
     status: "draft", reconciliationStatus: "unreconciled", createdAt: "2026-04-05T10:00:00Z",
     organizationId: "demo-org", currency: "INR",
     cgstAmount: 4500, sgstAmount: 4500, igstAmount: 0,

@@ -2,7 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, FileText, Receipt, Building2, ChevronDown,
   ArrowLeftRight, BarChart3, BookOpen, Layers, Clock, List,
-  IndianRupee, Scale, Zap, X, Users, CreditCard,
+  IndianRupee, Scale, Zap, X, Users, CreditCard, TrendingUp,
+  PiggyBank, Building,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ALL_CURRENCIES, CurrencyCode } from "@/lib/currency";
@@ -25,6 +26,9 @@ const mainNav = [
   { label: "Invoices", path: "/app/invoices", icon: FileText },
   { label: "Payments", path: "/app/payments", icon: CreditCard },
   { label: "Expenses", path: "/app/expenses", icon: Receipt },
+  { label: "Cash Flow", path: "/app/cashflow", icon: TrendingUp },
+  { label: "Budgets", path: "/app/budgets", icon: PiggyBank },
+  { label: "Assets", path: "/app/assets", icon: Building },
   { label: "Accounts", path: "/app/accounts", icon: List },
 ];
 

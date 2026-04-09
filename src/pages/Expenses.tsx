@@ -21,7 +21,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { downloadCSV } from "@/lib/csvExport";
 import { Expense } from "@/types/accounting";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/useExpenses";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -154,15 +155,27 @@ export default function Expenses() {
               Track your business expenses {sorted.length > 0 && `(${sorted.length} total)`}
             </p>
           </div>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Add Expense</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
-              <ExpenseForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Add Expense" />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            {sorted.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                downloadCSV("expenses.csv",
+                  ["Vendor", "Category", "Date", "Amount", "Description"],
+                  sorted.map((e) => [e.vendorName, e.category, e.date, e.amount, e.description || ""])
+                );
+              }}>
+                <Download className="h-4 w-4 mr-2" /> Export
+              </Button>
+            )}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" /> Add Expense</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
+                <ExpenseForm onSubmit={handleCreate} submitting={createMutation.isPending} submitLabel="Add Expense" />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <Card>

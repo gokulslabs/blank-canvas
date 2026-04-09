@@ -12,6 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import Invoices from "./pages/Invoices";
 import Expenses from "./pages/Expenses";
 import Payments from "./pages/Payments";
+import Cashflow from "./pages/Cashflow";
+import Budgets from "./pages/Budgets";
+import Assets from "./pages/Assets";
 import TrialBalance from "./pages/TrialBalance";
 import Reconciliation from "./pages/Reconciliation";
 import ProfitLoss from "./pages/ProfitLoss";
@@ -39,7 +42,6 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If no org and not already on onboarding, redirect
   if (!currentOrg && location.pathname !== "/app/onboarding") {
     return <Navigate to="/app/onboarding" replace />;
   }
@@ -69,6 +71,9 @@ function ProtectedRoutes() {
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/cashflow" element={<Cashflow />} />
+          <Route path="/budgets" element={<Budgets />} />
+          <Route path="/assets" element={<Assets />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/reports/trial-balance" element={<TrialBalance />} />
           <Route path="/reports/profit-loss" element={<ProfitLoss />} />
@@ -112,7 +117,6 @@ const App = () => (
             <Route path="/signup" element={<AuthRoute />} />
             <Route path="/demo" element={<DemoProvider><Demo /></DemoProvider>} />
             <Route path="/app/*" element={<ProtectedRoutes />} />
-            {/* Legacy redirects */}
             <Route path="/auth" element={<AuthRoute />} />
             <Route path="/invoices" element={<Navigate to="/app/invoices" replace />} />
             <Route path="/expenses" element={<Navigate to="/app/expenses" replace />} />

@@ -170,6 +170,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         taxAmount: gst.totalTax,
         total,
+        amountPaid: 0,
+        amountDue: total,
         status: "draft",
         reconciliationStatus: "unreconciled",
         createdAt: new Date().toISOString(),

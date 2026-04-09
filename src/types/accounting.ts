@@ -23,7 +23,7 @@ export interface OrganizationMember {
   id: string;
   userId: string;
   organizationId: string;
-  role: "owner" | "accountant";
+  role: "owner" | "admin" | "accountant" | "viewer";
   createdAt: string;
 }
 
@@ -54,7 +54,9 @@ export interface Invoice {
   subtotal: number;
   taxAmount: number;
   total: number;
-  status: "draft" | "sent" | "paid";
+  amountPaid: number;
+  amountDue: number;
+  status: "draft" | "sent" | "partially_paid" | "paid";
   reconciliationStatus: "unreconciled" | "reconciled";
   createdAt: string;
   organizationId: string;
@@ -105,7 +107,7 @@ export interface Payment {
   organizationId: string;
   invoiceId: string;
   amount: number;
-  method: "cash" | "bank" | "upi";
+  method: "cash" | "bank" | "upi" | "card";
   date: string;
   notes?: string;
   createdAt: string;
@@ -209,4 +211,23 @@ export interface GSTSummary {
   b2cValue: number;
   invoices: GSTInvoiceRow[];
   hsnSummary: HSNSummaryRow[];
+}
+
+export interface Budget {
+  id: string;
+  organizationId: string;
+  category: string;
+  monthlyLimit: number;
+  createdAt: string;
+}
+
+export interface FixedAsset {
+  id: string;
+  organizationId: string;
+  name: string;
+  purchaseValue: number;
+  purchaseDate: string;
+  depreciationRate: number;
+  description?: string;
+  createdAt: string;
 }

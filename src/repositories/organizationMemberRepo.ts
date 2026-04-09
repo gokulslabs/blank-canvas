@@ -8,7 +8,7 @@ export interface OrganizationMember {
   id: string;
   userId: string;
   organizationId: string;
-  role: "owner" | "accountant";
+  role: "owner" | "admin" | "accountant" | "viewer";
   createdAt: string;
 }
 
